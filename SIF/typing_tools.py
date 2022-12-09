@@ -1,6 +1,6 @@
 from copy import copy
-from utils.io import *
-from utils.system import *
+from .io import *
+from .system import *
 
 def update_types_to_match(target : World, reference : World, debug : bool = False) -> None:
     """Update the ""atom"" and topo types of target to be the same as reference.\n

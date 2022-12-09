@@ -4,18 +4,17 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name='',
-    version='0.0.3',
-    author='Mike Huls',
-    author_email='mike_huls@hotmail.com',
-    description='Testing installation of Package',
+    name='SIF',
+    version='0.0.1',
+    author='Kieran Harris',
+    author_email='kieran.harris@postgrad.manchester.ac.uk',
+    description='A package containing a number of tools useful for modifying simulation input files.',
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url='https://github.com/mike-huls/toolbox',
+    url='https://github.com/k-harris27/SIF',
     project_urls = {
-        "Bug Tracker": "https://github.com/mike-huls/toolbox/issues"
     },
     license='MIT',
-    packages=['toolbox'],
-    install_requires=['requests'],
+    packages=['SIF'],
+    install_requires=[],
 )

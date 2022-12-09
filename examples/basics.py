@@ -1,11 +1,15 @@
-from ..utils import system
+from SIF import system
 
 sys = system.World(-10,-10,-10,10,10,10)
+
+# Ideally have actual atom types to add.
+[sys.add_atom_type(1.0) for _ in range(3)]
 
 sys.add_atom(1,-1.4,[-1.,-3.,4.])
 sys.add_atom(2,-1.4,[-2,-3.,4.])
 sys.add_atom(0,1.4,[0,0,0])
 sys.add_atom(1,1.0,[0,0,0])
+
 
 sys.add_bond_type(0.0, 0.0)
 
