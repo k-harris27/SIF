@@ -1,4 +1,4 @@
-from utils import io,system,template_tools
+from SIF import io,system,template_tools
 import math
 
 """
@@ -150,14 +150,14 @@ io.write_lammps_data(ddm_frag,
 
 # Output in LAMMPS molecule (bond/react template) format
 io.write_react_template(dgeba_mxda_frag,
-        "test_data/q_eq_frags/dgeba-mxda_frag.template",
+        "dgeba-mxda_frag.template",
         "DGEBA & MXDA fragment created by SIF.")
 io.write_react_template(dm_frag,
-        "test_data/q_eq_frags/dm_frag.template",
+        "dm_frag.template",
         "DGEBA-MXDA Dimer fragment created by SIF.")
 io.write_react_template(dgeba_dm_frag,
-        "test_data/q_eq_frags/dgeba-dm_frag.template",
+        "dgeba-dm_frag.template",
         "DGEBA-MXDA Dimer & DGEBA fragment created by SIF.")
 io.write_react_template(ddm_frag,
-        "test_data/q_eq_frags/ddm_frag.template",
+        "ddm_frag.template",
         "DGEBA-DGEBA-MXDA Trimer fragment created by SIF.")

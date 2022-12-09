@@ -1,6 +1,6 @@
 from distutils.log import warn
 from email import header
-from utils.system import *
+from .system import *
 import resource
 
 debug = False
