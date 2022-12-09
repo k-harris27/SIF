@@ -1,10 +1,17 @@
-############################
-# ~~~ Data Suite ~~~       #
-# Tools to mess around     #
-# with LAMMPS data         #
-#                          #
-# Written by Kieran Harris #
-############################
+"""
+Currently not used!!!
+Project to be loaded as a module into custom scripts instead.
+"""
+
+raise NotImplementedError("This script is currently not used! Load this package into your own script with 'import SIF'")
+
+###########################################
+# ~~~ Simulation Input Finagler ~~~       #
+# Tools to mess around                    #
+# with assorted LAMMPS data               #
+#                                         #
+# Written by Kieran Harris                #
+###########################################
 
 # Import each tool that can be run (from ./tools/)
 from tools import *
