@@ -55,9 +55,8 @@ def read_args():
     parser.add_argument("-r", "--data-ref", action="store", required=True,
 			help="Path to topology reference data file.",
 			metavar="FILE")
-    parser.add_argument("-o", "--data-out", action="store", required=False,
-			help=("Path to output data file."
-				"If not specified, overwrites input file."),
+    parser.add_argument("-o", "--data-out", action="store", required=True,
+			help=("Path to output data file."),
 			metavar="FILE")
     parser.add_argument("-I", "--settings-in", action="store", required=True,
 			help="Path to input .in.settings file.",
@@ -65,16 +64,16 @@ def read_args():
     parser.add_argument("-R", "--settings-ref", action="store", required=True,
 			help="Path to topology reference .in.settings file.",
 			metavar="FILE")
-    parser.add_argument("-O", "--settings-out", action="store", required=False,
-			help=("Path to output .in.settings file."
-				"If not specified, overwrites input file."
-				"NOTE: Will be identical to ref, so not important."),
-			metavar="FILE")
     parser.add_argument("-a", "--atom-type", action="extend", required=False,
 			default=None, nargs="+",
 			help=("Atom type index (integer) to insert "
 				"& corresponding mass (float)."),
 			metavar="'TYPE,MASS'")
+    """
+    parser.add_argument("-p", "--no-pair-coeffs", action="store_true",
+			help=("If this flag is set, atom pair coefficients "
+				"will not be added to the output files."))
+    """
 
     return parser.parse_args()
 
