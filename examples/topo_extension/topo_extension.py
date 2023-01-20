@@ -92,7 +92,7 @@ def read_new_atom_types(args):
 
         # Checking we have sensible values.
         try:
-            type_id = int(type_id)
+            type_id = int(type_id) - 1  # -1 to convert LAMMPS index to python index.
         except ValueError as e:
             raise ValueError(f"Atom type IDs must be integers. "
 			     "A non-integer has been received: {type_id}") from e
