@@ -1,7 +1,4 @@
-#from SIF import _core, SIF.io
-#,template_tools
 import SIF
-import math
 
 """
 In this script, we use SIF to load in a LAMMPS data file containing
