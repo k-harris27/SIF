@@ -1,5 +1,9 @@
 # Exclude files/directories
 
+test_data/
+.vscode/
+# LAMMPS data files shouldn't be included
+*.data  
 
 ####### Python Defaults ########
 

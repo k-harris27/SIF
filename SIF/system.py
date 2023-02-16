@@ -1,11 +1,7 @@
 ### Defining classes for system description ###
 
-# TODO: Run test script creating/deleting etc??
-
-# NOTE: Do I need this???
 from argparse import ArgumentError
-from multiprocessing.sharedctypes import Value
-from typing import Iterable,List,Dict
+from typing import Iterable,List
 import math
 from copy import deepcopy
 
@@ -177,6 +173,11 @@ class World:
     def n_atom_types(self):
         """Return the number of atom types available in the system."""
         return len(self.atom_type_params)
+    
+    @property
+    def n_atoms(self):
+        """The number of atoms in the system."""
+        return len(self.atoms)
 
     @property
     def width(self):
@@ -539,6 +540,8 @@ class World:
         return self._get_topo_index("improper", atom1, atom2, atom3, atom4)
 
     def count_atoms(self):
+        """DEPRECATED: Use the n_atoms property."""
+        print("WARNING: count_atoms is deprecated. Use the n_atoms property.")
         return len(self.atoms)
 
     def append_atom_types(self, new_atom_types : list) -> None:
@@ -785,3 +788,9 @@ class World:
         elif topo_name == "improper": return self.improper_params
         else: raise ValueError(f"{repr(topo_name)} is not a valid value of topo_name.")
  
+
+def lammps_index(i : int):
+    """Input a LAMMPS-style (i.e. starting at 1) index and return
+        a python-style (0-start) index. Really just takes 1 from an int."""
+    
+    return i - 1
