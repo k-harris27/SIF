@@ -1,9 +1,5 @@
-from distutils.log import warn
-from email import header
-from .system import *
+from ._core import *
 import resource
-
-debug = False
 
 def read_lammps_data(path_to_file : str, path_to_params : str = None) -> World:
     """Read LAMMPS .data file into a world object.\n
@@ -155,7 +151,7 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None) -> World:
                 world.impropers[i] = Topology(*atoms, type_id = imp_type)
 
             elif section not in warned_sections:
-                print(f"WARNING: Unexpected section title in LAMMPS input file: {section}")
+                logger.warning(f"Unexpected section title in LAMMPS input file: {section}")
                 warned_sections.append(section)
 
     # Interpret coefficients file, if it exists
@@ -180,7 +176,7 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None) -> World:
                         topo_params[id] = params
                 
 
-    if debug: _debug_print_resource()
+    _debug_print_resource()
     return world
 
 def write_lammps_data(world : World, path_to_file : str, comment : str = "") -> None:
@@ -295,7 +291,7 @@ def read_react_template(path_to_file : str) -> World:
 
         for topo_name in ("bond","angle","dihedral","improper"):
             param_list = world._get_topo_param_list(topo_name)
-            print(f"{topo_name}: {n_types[topo_name]}")
+            logger.debug(f"{topo_name}: {n_types[topo_name]}")
             param_list.extend([None] * n_types[topo_name])
     
     return world
@@ -365,6 +361,6 @@ def _write_lammps_topo(topo_name, topo, file):
     file.write("\n")
 
 def _debug_print_resource():
-    print('Peak Memory Usage =', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
-    print('User Mode Time =', resource.getrusage(resource.RUSAGE_SELF).ru_utime)
-    print('System Mode Time =', resource.getrusage(resource.RUSAGE_SELF).ru_stime)
+    logger.debug('Peak Memory Usage =', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    logger.debug('User Mode Time =', resource.getrusage(resource.RUSAGE_SELF).ru_utime)
+    logger.debug('System Mode Time =', resource.getrusage(resource.RUSAGE_SELF).ru_stime)

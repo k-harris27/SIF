@@ -4,7 +4,10 @@ from argparse import ArgumentError
 from typing import Iterable,List
 import math
 from copy import deepcopy
+import logging
 
+# Logger object, for nicely formatting warnings, errors etc.
+logger = logging.getLogger(__name__)
 
 class Vector3:
 
@@ -266,7 +269,7 @@ class World:
                         "impropers": len(world_2.improper_params)}]
 
         unequal_types = [n_params[0][t] != n_params[1][t] for t in ("atoms", "bonds", "angles", "dihedrals", "impropers")]
-        if True in unequal_types: print("WARNING: Merged systems have different numbers of atom and/or topology types.")
+        if True in unequal_types: logger.warning("Merged systems have different numbers of atom and/or topology types.")
 
         if n_params[1]["atoms"] > n_params[0]["atoms"]: self.atom_type_params = world_2.atom_type_masses.copy()
         if n_params[1]["bonds"] > n_params[0]["bonds"]: self.bond_params = world_2.bond_params.copy()
@@ -319,7 +322,7 @@ class World:
         
         # Check duplicate
         if self._get_topo_index(topo_name, *new_topo) >= 0:
-            print(f"WARNING: {topo_name} {new_topo} already exists.")
+            logger.warning(f"{topo_name} {new_topo} already exists.")
             return
 
         topo_list.append(new_topo)
@@ -360,7 +363,7 @@ class World:
             self._delete_topos(topo_name, *topo_indices)
         
         if topo_deleted:
-            print(f"WARNING: Deleting atom {atom_index} has led to the deletion of topology.")
+            logger.warning(f"Deleting atom {atom_index} has led to the deletion of topology.")
 
         # Any atoms with higher ID than deleted atom will have their ID changed
         # So we must update all topology to reference the correct atoms
@@ -541,7 +544,7 @@ class World:
 
     def count_atoms(self):
         """DEPRECATED: Use the n_atoms property."""
-        print("WARNING: count_atoms is deprecated. Use the n_atoms property.")
+        logger.warning("count_atoms is deprecated. Use the n_atoms property.")
         return len(self.atoms)
 
     def append_atom_types(self, new_atom_types : list) -> None:
