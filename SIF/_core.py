@@ -367,7 +367,7 @@ class World:
 
         # Any atoms with higher ID than deleted atom will have their ID changed
         # So we must update all topology to reference the correct atoms
-        self._shift_topo_indices(range(atom_index+1,self.count_atoms()), shift = -1)
+        self._shift_topo_indices(range(atom_index+1,self.n_atoms), shift = -1)
 
         return self.atoms.pop(atom_index)
 
@@ -674,7 +674,7 @@ class World:
             atoms = atoms[::-1]  # Reverses tuple of atoms
 
         for at in atoms:
-            if at >= self.count_atoms():
+            if at >= self.n_atoms:
                 raise IndexError(f"Atom index {at} is out of bounds.")
 
         return atoms
