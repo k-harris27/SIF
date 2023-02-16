@@ -8,4 +8,4 @@ SIF.typing_tools.change_atom_type(world,
                                 target_indices=list(range(0,world.n_atoms,2)),
                                 new_mass=12.011)
 
-SIF.io.write_lammps_data(world,"atom_types_changed.data")
+SIF.io.write_lammps_data(world,"test_data/OUT_atom_types_changed.data")
