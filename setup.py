@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name='SIF',
-    version='0.0.1',
+    version='0.0.2',
     author='Kieran Harris',
     author_email='kieran.harris@postgrad.manchester.ac.uk',
     description='A package containing a number of tools useful for modifying simulation input files.',
