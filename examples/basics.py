@@ -1,6 +1,6 @@
-from SIF import system
+import SIF
 
-sys = system.World(-10,-10,-10,10,10,10)
+sys = SIF.World(-10,-10,-10,10,10,10)
 
 # Ideally have actual atom types to add.
 [sys.add_atom_type(1.0) for _ in range(3)]

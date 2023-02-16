@@ -1,6 +1,6 @@
 from copy import copy
 from .io import *
-from .system import *
+from ._core import *
 from typing import List
 
 def update_types_to_match(target : World, reference : World, debug : bool = False) -> None:

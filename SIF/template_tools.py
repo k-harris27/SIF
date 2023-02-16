@@ -81,7 +81,7 @@ def equate_charges(
     delta_charge = product.total_charge - charge  # Amount total charge needs to change by
 
     # Calculate number of atoms we're spreading the charge offset across.
-    num_prod_atoms = product.count_atoms() - len(const_atoms)
+    num_prod_atoms = product.n_atoms - len(const_atoms)
     offset = -delta_charge / num_prod_atoms  # Calculate charge offset per atom.
 
     # Instantiate cascade rounder to allow rounding without changing the total.

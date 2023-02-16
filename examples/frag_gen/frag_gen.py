@@ -9,7 +9,7 @@ In this script, we use SIF to load in a LAMMPS data file containing
 """
 
 # Read in the world containing all minimum n-mers from data file.
-all_mols = SIF.SIF.io.read_lammps_data("poly_atoms.data")
+all_mols = SIF.io.read_lammps_data("poly_atoms.data")
 
 # We have identified the desired "reacting" atoms of each molecule ahead of time
 #   so we make a note of their (0-starting) atom index in the data file
@@ -100,10 +100,10 @@ SIF.template_tools.equate_charges(ddm_frag, charge = ddm_q_target, const_atoms =
 # updated in fix bond/react (see custom_charges in fix bond/react docs).
 dgeba_mxda_frag.add_fragment(
         "update_q",
-        [i for i in range(dgeba_mxda_frag.count_atoms()) if i not in dgeba_mxda_const_q_atoms])
+        [i for i in range(dgeba_mxda_frag.n_atoms) if i not in dgeba_mxda_const_q_atoms])
 dgeba_dm_frag.add_fragment(
         "update_q",
-        [i for i in range(dgeba_dm_frag.count_atoms()) if i not in dgeba_dm_const_q_atoms])
+        [i for i in range(dgeba_dm_frag.n_atoms) if i not in dgeba_dm_const_q_atoms])
 
 
 # In the OPLS-AA Forcefield, hydrogen atoms have no Lennard-Jones interactions.
