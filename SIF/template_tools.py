@@ -1,8 +1,7 @@
 from argparse import ArgumentError
-from typing import Dict, List,Set,Tuple
-from copy import copy,deepcopy
+from typing import List,Set
 from .io import *
-from .system import *
+from ._core import *
 
 def get_connected_atoms(world : World, atom_ids : List[int], extent : int = 3, return_equivalences : bool = False) -> World:
     """

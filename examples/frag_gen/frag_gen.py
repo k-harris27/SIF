@@ -1,5 +1,4 @@
-from SIF import io,system,template_tools
-import math
+import SIF
 
 """
 In this script, we use SIF to load in a LAMMPS data file containing
@@ -10,7 +9,7 @@ In this script, we use SIF to load in a LAMMPS data file containing
 """
 
 # Read in the world containing all minimum n-mers from data file.
-all_mols = io.read_lammps_data("poly_atoms.data")
+all_mols = SIF.SIF.io.read_lammps_data("poly_atoms.data")
 
 # We have identified the desired "reacting" atoms of each molecule ahead of time
 #   so we make a note of their (0-starting) atom index in the data file
@@ -29,21 +28,21 @@ all_mols = io.read_lammps_data("poly_atoms.data")
 #   reactive atoms an atom can be to be included in the template).
 
 # Monomers - Useful for calculations later but not used directly
-dgeba_frag = template_tools.get_connected_atoms(all_mols,[10, 11], extent=3)
-mxda_frag = template_tools.get_connected_atoms(all_mols,[49, 59], extent=3)
+dgeba_frag = SIF.template_tools.get_connected_atoms(all_mols,[10, 11], extent=3)
+mxda_frag = SIF.template_tools.get_connected_atoms(all_mols,[49, 59], extent=3)
 
 # Reactant Fragments - Include both reactant fragments for intermolecular reactions.
 #   The equiv_atoms dictionaries aren't used in this example, but is useful if you
 #   want to be able to easily get from fragment atom IDs to the source world IDs.
-dgeba_mxda_frag, dgeba_mxda_equiv_atoms = template_tools.get_connected_atoms(
+dgeba_mxda_frag, dgeba_mxda_equiv_atoms = SIF.template_tools.get_connected_atoms(
         all_mols,[10, 11, 49, 59], extent=3, return_equivalences=True)
-dgeba_dm_frag, dgeba_dm_equiv_atoms = template_tools.get_connected_atoms(
+dgeba_dm_frag, dgeba_dm_equiv_atoms = SIF.template_tools.get_connected_atoms(
         all_mols,[10,11,82, 83], extent=3, return_equivalences=True)
 
 # Products - Make sure you get the exact same parts of the molecules as the reactants.
-dm_frag, dm_equiv_atoms = template_tools.get_connected_atoms(
+dm_frag, dm_equiv_atoms = SIF.template_tools.get_connected_atoms(
         all_mols,[82, 83], extent=3, return_equivalences=True)
-ddm_frag, ddm_equiv_atoms = template_tools.get_connected_atoms(
+ddm_frag, ddm_equiv_atoms = SIF.template_tools.get_connected_atoms(
         all_mols,[153,154,164], extent=3, return_equivalences=True)
 
 
@@ -94,8 +93,8 @@ ddm_q_target = 2* dgeba_frag_charge + mxda_frag_charge
 # Reactant charges aren't used in fix bond/react, so don't matter.
 # We tell the code to ignore the atoms whose charges should be kept constant throughout
 #   the simulation by giving their template atom IDs to const_atoms.
-template_tools.equate_charges(dm_frag, charge = dm_q_target, const_atoms = dm_const_q_atoms)
-template_tools.equate_charges(ddm_frag, charge = ddm_q_target, const_atoms = ddm_const_q_atoms)
+SIF.template_tools.equate_charges(dm_frag, charge = dm_q_target, const_atoms = dm_const_q_atoms)
+SIF.template_tools.equate_charges(ddm_frag, charge = ddm_q_target, const_atoms = ddm_const_q_atoms)
 
 # Create sub-fragments in reactant templates to define which atoms' charges **are**
 # updated in fix bond/react (see custom_charges in fix bond/react docs).
@@ -135,29 +134,29 @@ ddm_frag.add_bond_type(0.,0.)
 ddm_frag.add_bond(3,5,type_id = ddm_n_bond_types)
 
 # Output in LAMMPS data file format
-io.write_lammps_data(dgeba_mxda_frag,
+SIF.io.write_lammps_data(dgeba_mxda_frag,
         "dgeba-mxda_frag.data",
         "DGEBA & MXDA fragment created by SIF.")
-io.write_lammps_data(dm_frag,
+SIF.io.write_lammps_data(dm_frag,
         "dm_frag.data",
         "DGEBA-MXDA Dimer fragment created by SIF.")
-io.write_lammps_data(dgeba_dm_frag,
+SIF.io.write_lammps_data(dgeba_dm_frag,
         "dgeba-dm_frag.data",
         "DGEBA-MXDA Dimer & DGEBA fragment created by SIF.")
-io.write_lammps_data(ddm_frag,
+SIF.io.write_lammps_data(ddm_frag,
         "ddm_frag.data",
         "DGEBA-DGEBA-MXDA Trimer fragment created by SIF.")
 
 # Output in LAMMPS molecule (bond/react template) format
-io.write_react_template(dgeba_mxda_frag,
+SIF.io.write_react_template(dgeba_mxda_frag,
         "dgeba-mxda_frag.template",
         "DGEBA & MXDA fragment created by SIF.")
-io.write_react_template(dm_frag,
+SIF.io.write_react_template(dm_frag,
         "dm_frag.template",
         "DGEBA-MXDA Dimer fragment created by SIF.")
-io.write_react_template(dgeba_dm_frag,
+SIF.io.write_react_template(dgeba_dm_frag,
         "dgeba-dm_frag.template",
         "DGEBA-MXDA Dimer & DGEBA fragment created by SIF.")
-io.write_react_template(ddm_frag,
+SIF.io.write_react_template(ddm_frag,
         "ddm_frag.template",
         "DGEBA-DGEBA-MXDA Trimer fragment created by SIF.")

@@ -1,4 +1,4 @@
-from SIF import io,system,typing_tools
+import SIF
 import argparse
 
 """
@@ -26,10 +26,10 @@ def main():
     atom_types = read_new_atom_types(args)
 
     # Read in topology & settings (Forcefield) info of world to have atom/topo types added.
-    world = io.read_lammps_data(d_in,s_in)
+    world = SIF.io.read_lammps_data(d_in,s_in)
     
     # Read in topology & settings (Forcefield) info of world used to take atom/topo types from (reference).
-    ref = io.read_lammps_data(d_ref,s_ref)
+    ref = SIF.io.read_lammps_data(d_ref,s_ref)
     
     # Atom types have to be added manually currently...
     for t in atom_types:
@@ -38,10 +38,10 @@ def main():
     # Update topology types of world to match ref, then checks that there are no actual bonds of the new types.
     # The print lines will break if the topology list breaks - things seem to work fine so can probably
     #   delete them.
-    typing_tools.update_types_to_match(world,ref, debug = True)
+    SIF.typing_tools.update_types_to_match(world,ref, debug = True)
    
     # Finally, write type-extended data out
-    io.write_lammps_data(world, d_out)
+    SIF.io.write_lammps_data(world, d_out)
 
 def read_args():
     """Interpret the arguments passed to the script when it was run."""
