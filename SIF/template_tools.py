@@ -94,19 +94,14 @@ def equate_charges(
         atom.charge = cascade_rounder.round(atom.charge)
 
     # If the charges aren't equal, raise an error.
-    prod_charge = product.total_charge # Debug
-    prod_atom_charges = [a.charge for a in product.atoms] # Debug
     assert product.total_charge == charge, "A charge difference still exists between the products and reactants! Something is wrong..."
 
     del cascade_rounder
     return
 
 
-def depth_limited_search(world : World, depth : int, start_atom : int, prev_atom : int = -1) -> Set[int]:
-    """Recursive function for depth limited search of atoms within a given number of bonds. Don't set prev_atom - only used internally."""
-
-    # Initialisation
-    #if prev_atom == -1: depth_limited_search.found = {start_atom}  # Curly braces make a Set instead of List
+def depth_limited_search(world : World, depth : int, start_atom : int, _prev_atom : int = -1) -> Set[int]:
+    """Recursive function for depth limited search of atoms within a given number of bonds. Don't set _prev_atom - only used internally."""
 
     found = {start_atom}
 
@@ -114,8 +109,8 @@ def depth_limited_search(world : World, depth : int, start_atom : int, prev_atom
     if depth <= 0: return found
 
     for a in world.find_bonded_atoms(start_atom):
-        if a != prev_atom and a not in found:
-            found.update(depth_limited_search(world, depth-1,start_atom = a, prev_atom = start_atom))
+        if a != _prev_atom and a not in found:
+            found.update(depth_limited_search(world, depth-1,start_atom = a, _prev_atom = start_atom))
 
     return found
 

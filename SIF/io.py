@@ -1,6 +1,8 @@
 from ._core import *
 import resource
 
+# TODO: Read in atom/bond type names
+
 def read_lammps_data(path_to_file : str, path_to_params : str = None) -> World:
     """Read LAMMPS .data file into a world object.\n
     path_to_file would be a .data file, path_to_params is optional and should direct to the file specifying interaction coefficients."""
@@ -58,15 +60,15 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None) -> World:
                     num_impropers = int(words[0])
                     world.impropers = [None] * num_impropers
                 elif keyword == "atom types":
-                    world.append_atom_types([0.] * int(words[0]))
+                    world.append_atom_types([AtomType(mass=0)] * int(words[0]))
                 elif keyword == "bond types":
-                    world.append_bond_types([None] * int(words[0]))
+                    world.append_bond_types([TopologyType()] * int(words[0]))
                 elif keyword == "angle types":
-                    world.append_angle_types([None] * int(words[0]))
+                    world.append_angle_types([TopologyType()] * int(words[0]))
                 elif keyword == "dihedral types":
-                    world.append_dihedral_types([None] * int(words[0]))
+                    world.append_dihedral_types([TopologyType()] * int(words[0]))
                 elif keyword == "improper types":
-                    world.append_improper_types([None] * int(words[0]))
+                    world.append_improper_types([TopologyType()] * int(words[0]))
                 elif keyword == "xlo xhi":
                     world.set_dims(xlo = float(words[0]), xhi = float(words[1]))
                 elif keyword == "ylo yhi":
@@ -77,8 +79,7 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None) -> World:
                     raise ValueError(f"Unexpected line in header: {line}")
 
             elif section == "Masses":
-                world.set_atom_type_mass(type_index = int(words[0])-1,  # LAMMPS indices start at 1
-                mass = float(words[1]))
+                world.atom_types[int(words[0])-1].mass=float(words[1])
 
             elif section == "Atoms":
                 """
@@ -170,12 +171,11 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None) -> World:
                 # Collect and store topology parameters. There's better ways to do this but eh.
                 for topo_name in ("bond","angle","dihedral","improper"):
                     if words[0] == f"{topo_name}_coeff":
-                        topo_params = world._get_topo_param_list(topo_name)
+                        topo_types = world._get_topo_type_list(topo_name)
                         id = int(words[1])-1
                         params = [float(w) for w in words[2:]]
-                        topo_params[id] = params
+                        topo_types[id].parameters = params
                 
-
     _debug_print_resource()
     return world
 
@@ -194,11 +194,11 @@ def write_lammps_data(world : World, path_to_file : str, comment : str = "") -> 
         file.write(f"{len(world.dihedrals)} dihedrals\n")
         file.write(f"{len(world.impropers)} impropers\n")
         file.write("\n")
-        file.write(f"{len(world.atom_type_params)} atom types\n")
-        file.write(f"{len(world.bond_params)} bond types\n")
-        file.write(f"{len(world.angle_params)} angle types\n")
-        file.write(f"{len(world.dihedral_params)} dihedral types\n")
-        file.write(f"{len(world.improper_params)} improper types\n")
+        file.write(f"{len(world.atom_types)} atom types\n")
+        file.write(f"{len(world.bond_types)} bond types\n")
+        file.write(f"{len(world.angle_types)} angle types\n")
+        file.write(f"{len(world.dihedral_types)} dihedral types\n")
+        file.write(f"{len(world.improper_types)} improper types\n")
         file.write("\n")
         file.write(f"{world.xlo} {world.xhi} xlo xhi\n")
         file.write(f"{world.ylo} {world.yhi} ylo yhi\n")
@@ -208,8 +208,8 @@ def write_lammps_data(world : World, path_to_file : str, comment : str = "") -> 
         # Masses section
         file.write("Masses\n")
         file.write("\n")
-        for i,m in enumerate(world.atom_type_params):
-            file.write(f"{i+1} {m}\n")
+        for i,t in enumerate(world.atom_types):
+            file.write(f"{i+1} {t.mass}\n")
         file.write("\n")
 
         # Atoms section
@@ -253,7 +253,7 @@ def read_react_template(path_to_file : str) -> World:
             if section == "Headers":
                 val = int(words[0])
                 if words[1] == "atoms":
-                    world.atoms = [Atom(0,0,[0,0,0]) for _ in range(val)]
+                    world.atoms = [Atom(0,0,[0,0,0])] * range(val)
                 elif words[1] in ("bonds", "angles", "dihedrals", "impropers"):
                     topo_name = words[1][:-1]
                     topo = world._get_topo_list(topo_name)
@@ -287,10 +287,10 @@ def read_react_template(path_to_file : str) -> World:
             else:
                 raise ValueError(f"Unexpected section title in react template file: {section}")
 
-            world.atom_type_params = [1.0] * n_types["atom"]
+        world.atom_types = [None] * n_types["atom"]
 
         for topo_name in ("bond","angle","dihedral","improper"):
-            param_list = world._get_topo_param_list(topo_name)
+            param_list = world._get_topo_type_list(topo_name)
             logger.debug(f"{topo_name}: {n_types[topo_name]}")
             param_list.extend([None] * n_types[topo_name])
     
@@ -353,7 +353,7 @@ def write_react_template(world : World, path_to_file : str, comment : str = "") 
 
         
 # Used to write any topo sections for lammps-style files
-def _write_lammps_topo(topo_name, topo, file):
+def _write_lammps_topo(topo_name:str, topo:List[Topology], file):
     file.write(topo_name + "\n")
     file.write("\n")
     for i,t in enumerate(topo):
