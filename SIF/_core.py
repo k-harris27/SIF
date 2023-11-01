@@ -11,6 +11,7 @@ import math
 from copy import deepcopy
 import logging
 import numpy as np
+import itertools
 
 # Logger object, for nicely formatting warnings, errors etc.
 logger = logging.getLogger(__name__)
@@ -327,6 +328,7 @@ class World:
 
         unequal_types = [n_params[0][t] != n_params[1][t] for t in ("atoms", "bonds", "angles", "dihedrals", "impropers")]
         if True in unequal_types: logger.warning("Merged systems have different numbers of atom and/or topology types.")
+        w2_atoms = deepcopy(world_2.atoms)
 
         if type_merge_style == "Overwrite":
             if n_params[1]["atoms"] > n_params[0]["atoms"]: self.atom_types = world_2.atom_types.copy()
@@ -335,9 +337,35 @@ class World:
             if n_params[1]["dihedrals"] > n_params[0]["dihedrals"]: self.dihedral_types = world_2.dihedral_types.copy()
             if n_params[1]["impropers"] > n_params[0]["impropers"]: self.improper_types = world_2.improper_types.copy()
         elif type_merge_style == "Merge":
-            # TODO: Use atom/topo type names to make world merges smarter.
-            raise NotImplemented("Implement type merging!")
+            new_types = []
+            type_names_w1 = [t.name for t in self.atom_types]
+            type_names_w2 = [t.name for t in world_2.atom_types]
+            if None in type_names_w1 or None in type_names_w2:
+                raise ValueError("Merge style can't be used if not every atom has a type name!")
+            w2_i = 0
+            for type_w1 in self.atom_types:
+                type_w2 = world_2.atom_types[w2_i]
+                if type_w1.name not in type_names_w2:
+                    new_types.append(type_w1)
+                elif type_w1.name == type_w2.name:
+                    if type_w1.mass != type_w2.mass:
+                        raise ValueError("Atom types with the same name but different parameters are present in merging worlds!")
+                    new_types.append(type_w1)
+                    w2_i += 1
+                else:  # Take all w2 types up to and including the one matching w1_i.
+                    w2_match_i = type_names_w2.index(type_w1.name)
+                    new_types.extend(world_2.atom_types[w2_i:w2_match_i+1])
+                    w2_i = w2_match_i + 1
+            new_types.extend(world_2.atom_types[w2_i:])
 
+            # Manually looking up each one is quite bad... Could have built a lookup?
+            for atom in self.atoms:
+                type_name = self.atom_types[atom.type_id]
+                atom.type_id = new_types.index(type_name)
+            for atom in w2_atoms:
+                type_name = world_2.atom_types[atom.type_id]
+                atom.type_id = new_types.index(type_name)
+                    
         self.atoms.extend(
             [a.copy() for a in world_2.atoms]
             )
@@ -760,8 +788,8 @@ class World:
     def append_improper_types(self, new_improper_types : List[TopologyType]) -> None:
         self._append_topo_types("improper", new_improper_types)
 
-    def add_atom_type(self, mass:float, name:str = None, type_id = "append"):
-        """Add or insert a new atom type. If type_id is not specified, appends the new value."""
+    def add_atom_type(self, mass:float, name:str = None, index : Union[str,int] = "append"):
+        """Add or insert a new atom type. If index is not specified, appends the new value."""
 
         # If we already have an AtomType with this name, skip and warn.
         if name is not None and name in (t.name for t in self.atom_types):
@@ -770,16 +798,16 @@ class World:
         
         aType = AtomType(mass=mass, name=name)
 
-        if type_id == "append" or type_id == len(self.atom_types):
+        if index == "append" or index == len(self.atom_types):
             self.atom_types.append(aType)
             return
-        type_id = int(type_id)
-        if type_id < len(self.n_atom_types):
-            self.atom_types.insert(type_id,aType)
+        index = int(index)
+        if index < len(self.n_atom_types):
+            self.atom_types.insert(index,aType)
             # We just changed all atom type indices above index type_id, so we need to shift all references to them.
-            self._shift_atom_types(range(type_id,self.n_atom_types),shift=+1)
+            self._shift_atom_types(range(index,self.n_atom_types),shift=+1)
         else:
-            raise ValueError(f"type_id must be between 0 and the number of existing atom types ({self.n_atom_types}), inclusive. Received {type_id}.")
+            raise ValueError(f"type_id must be between 0 and the number of existing atom types ({self.n_atom_types}), inclusive. Received {index}.")
 
     def _add_topo_type(self, topo_name, *params, topo_id = "append", type_name:str=None):
         """

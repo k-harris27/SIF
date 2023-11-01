@@ -1,4 +1,5 @@
-file_path = "./ddm_frag.data"
+import os
+file_path = f"{os.path.dirname(__file__)}/ddm_frag.data"
 
 atom_names = {
     1 : "CT",
