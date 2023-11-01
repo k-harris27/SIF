@@ -1,9 +1,10 @@
 from ._core import *
 import resource
+from typing import Dict
 
 # TODO: Read in atom/bond type names
 
-def read_lammps_data(path_to_file : str, path_to_params : str = None) -> World:
+def read_lammps_data(path_to_file : str, path_to_params : str = None, type_name_lookup : Dict[str,str] = None) -> World:
     """Read LAMMPS .data file into a world object.\n
     path_to_file would be a .data file, path_to_params is optional and should direct to the file specifying interaction coefficients."""
     world = World()  # Create world instance to be populated
@@ -60,7 +61,7 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None) -> World:
                     num_impropers = int(words[0])
                     world.impropers = [None] * num_impropers
                 elif keyword == "atom types":
-                    world.append_atom_types([AtomType(mass=0)] * int(words[0]))
+                    world.append_atom_types([AtomType(mass=0) for _ in range(int(words[0]))])
                 elif keyword == "bond types":
                     world.append_bond_types([TopologyType()] * int(words[0]))
                 elif keyword == "angle types":
@@ -79,7 +80,14 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None) -> World:
                     raise ValueError(f"Unexpected line in header: {line}")
 
             elif section == "Masses":
-                world.atom_types[int(words[0])-1].mass=float(words[1])
+                print(f"Atom Type: {words[0], words[1], comment}")
+                world.atom_types[int(words[0])-1].mass = float(words[1])
+                comment_words = comment.split()
+                if len(comment_words) == 1:  # Assume it's an atom type string
+                    name = comment_words[0]
+                    if type_name_lookup is not None:
+                        name = type_name_lookup[name]
+                    world.atom_types[int(words[0])-1].name = name
 
             elif section == "Atoms":
                 """
@@ -176,6 +184,10 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None) -> World:
                         params = [float(w) for w in words[2:]]
                         topo_types[id].parameters = params
                 
+    # Infer topology names if all atom type names are given.
+    if all(t.name is not None for t in world.atom_types):
+        world.infer_topo_names_from_atoms(override=True)
+
     _debug_print_resource()
     return world
 

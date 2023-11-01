@@ -433,9 +433,7 @@ class World:
  
     def _add_topo(self:'World', topo_name, *atoms, type_id:Union[int,str]=None):
         """Add a new topology of any type between any number of atoms (specified by index) to the system."""
-
-        assert(type_id is not None, "type_id is a required argument!")
-
+        
         if isinstance(type_id, str):
             type_id = self._topo_type_id_from_name(topo_name, type_id)
 
@@ -747,7 +745,7 @@ class World:
             raise TypeError(f"new_atom_types must be a list or other iterable, not {type(new_atom_types)}.")
 
         # If the list contains anything that isn't an AtomType object, throw an error.
-        if False in [isinstance(t,AtomType) for t in new_atom_types]:
+        if False in (isinstance(t,AtomType) for t in new_atom_types):
             raise TypeError(f"One or more atom type properties is invalid in {new_atom_types}.")
 
         self.atom_types.extend(new_atom_types)
@@ -879,20 +877,20 @@ class World:
     def _validate_topo_atoms(self, *atom_ids):
         """Used to check bond/angle/dihedral atom inputs are valid and order them properly"""
         # Check atom indices are integers
-        try:
-            atom_ids = [int(a) for a in atom_ids]
-        except ValueError as err:
-            raise Exception(f"One or more atom indices in {atom_ids} is not an integer.") from err
-
+        if not all(isinstance(a, int) for a in atom_ids) and not all(isinstance(a, str) for a in atom_ids):
+            raise Exception(f"One or more atom indices in {atom_ids} is not an integer or string.")
+        
         # Ensure first atom index is smaller than last
         if atom_ids[0] > atom_ids[-1]:
             atom_ids = atom_ids[::-1]  # Reverses tuple of atoms
 
         for at in atom_ids:
-            if at >= self.n_atoms:
-                raise IndexError(f"Atom index {at} is out of bounds.")
+            if isinstance(at, int) and at >= self.n_atoms:
+                raise ValueError(f"Atom index {at} is out of bounds.")
+            elif isinstance(at, str) and at not in [t.name for t in self.atom_types]:
+                raise ValueError(f"Atom type name {at} is not defined.")
 
-        return atom_ids
+        return list(atom_ids)
 
     def _shift_atom_types(self, target_type_range, shift : int) -> None:
         """Shift the atom type numbers of atoms in the world. Useful for when atom types are added/removed within the list.
@@ -1005,7 +1003,35 @@ class World:
         elif topo_name == "dihedral": return self.dihedral_types
         elif topo_name == "improper": return self.improper_types
         else: raise ValueError(f"{repr(topo_name)} is not a valid value of topo_name.")
- 
+
+    def infer_topo_names_from_atoms(self, override=True):
+        """
+        Uses atom type names to infer topology type names.
+        
+        Parameters
+        ----------
+        override : str (default = True)
+            If true, topology with names already set will have their names overwritten.
+        """
+
+        for topo_kind in self._available_topo_types:
+            topo_types = self._get_topo_type_list(topo_kind)
+            new_type_names = [None] * len(topo_types)
+            for topo in self._get_topo_list(topo_kind):
+                atom_type_names = [self.atom_types[self.atoms[i].type_id].name for i in topo.get_atoms()]
+                atom_type_names = self._validate_topo_atoms(*atom_type_names)
+                new_name = "-".join(atom_type_names)
+                
+                # Check any other attempts we've made this time have given the same name.
+                old_new_name = new_type_names[topo.type_id]
+                if old_new_name is None:
+                    old_new_name = new_name
+                elif old_new_name != new_name:
+                    logger.warning(f"The same topo type has been given two different names: {old_new_name} and {new_name}.")
+                else:
+                    continue  # We already assigned the same name before, no need to do it again.
+                topo_types[topo.type_id].name = new_name
+
 
 def lammps_index(i : int):
     """Input a LAMMPS-style (i.e. starting at 1) index and return
@@ -1018,3 +1044,4 @@ def _exactly_one_defined(*args):
         returns True if exactly one of them is not None,
         otherwise returns False"""
     return (sum((a is not None for a in args)) == 1)
+
