@@ -1,6 +1,5 @@
 import pytest
 import SIF
-import SIF.io
 from SIF.forcefields import ForceFields
 import os
 from pathlib import Path
@@ -40,4 +39,20 @@ def test_ff_atom_names(oplsaa_world : SIF.World):
     assert all(t in available_types for t in world_types)
 
 def test_ff_bond_names(oplsaa_world : SIF.World):
-    assert oplsaa_world.bond_types[0].name == "CA-HA"
+    assert oplsaa_world.bond_types[0].name == "HO-OH"
+
+def test_no_dupes_in_inferred(oplsaa_world : SIF.World):
+    world = oplsaa_world
+    avail_kinds = world._available_topo_types
+    has_duplicates = {kind:None for kind in avail_kinds}
+    for topo_kind in world._available_topo_types:
+        topo_types = world._get_topo_type_list(topo_kind)
+        type_names = [t.name for t in topo_types]
+        # Fun trick - turn into a set (no duplicates).
+        # If the lengths are different, we had duplicates.
+        dupes = (len(type_names) != len(set(type_names)))
+        has_duplicates[topo_kind] = dupes
+        if dupes:
+            print(f"Duplicate names: {[t for t in type_names if type_names.count(t) > 1]}")
+
+    assert all([dupes is False for dupes in has_duplicates.values()])

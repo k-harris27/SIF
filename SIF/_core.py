@@ -1019,7 +1019,7 @@ class World:
             new_type_names = [None] * len(topo_types)
             topo_list = self._get_topo_list(topo_kind)
             if not override:  # Find only elements where their type doesn't have a name yet.
-                topo_list = filter(lambda t : topo_types[t.type_id].name is None, topo_list)
+                topo_list = filter(lambda t : topo_types[t.type_id].name is not None, topo_list)
             for topo in topo_list:
                 atom_type_names = [self.atom_types[self.atoms[i].type_id].name for i in topo.get_atoms()]
                 atom_type_names = self._validate_topo_atoms(*atom_type_names)
@@ -1028,9 +1028,9 @@ class World:
                 # Check any other attempts we've made this time have given the same name.
                 old_new_name = new_type_names[topo.type_id]
                 if old_new_name is None:
-                    old_new_name = new_name
+                    new_type_names[topo.type_id] = new_name
                 elif old_new_name != new_name:
-                    logger.warning(f"The same topo type has been given two different names: {old_new_name} and {new_name}.")
+                    logger.warning(f"The same {topo_kind} type has been given two different names: {old_new_name} and {new_name}.")
                 else:
                     continue  # We already assigned the same name before, no need to do it again.
                 topo_types[topo.type_id].name = new_name

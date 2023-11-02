@@ -1,6 +1,5 @@
 import pytest
 import SIF
-import SIF.io
 from copy import deepcopy
 
 @pytest.fixture(scope="function")

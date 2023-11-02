@@ -63,13 +63,13 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None, type_name_
                 elif keyword == "atom types":
                     world.append_atom_types([AtomType(mass=0) for _ in range(int(words[0]))])
                 elif keyword == "bond types":
-                    world.append_bond_types([TopologyType()] * int(words[0]))
+                    world.append_bond_types([TopologyType() for _ in range(int(words[0]))])
                 elif keyword == "angle types":
-                    world.append_angle_types([TopologyType()] * int(words[0]))
+                    world.append_angle_types([TopologyType() for _ in range(int(words[0]))])
                 elif keyword == "dihedral types":
-                    world.append_dihedral_types([TopologyType()] * int(words[0]))
+                    world.append_dihedral_types([TopologyType() for _ in range(int(words[0]))])
                 elif keyword == "improper types":
-                    world.append_improper_types([TopologyType()] * int(words[0]))
+                    world.append_improper_types([TopologyType() for _ in range(int(words[0]))])
                 elif keyword == "xlo xhi":
                     world.set_dims(xlo = float(words[0]), xhi = float(words[1]))
                 elif keyword == "ylo yhi":
@@ -199,7 +199,7 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None, type_name_
                 
     # Infer topology names if all atom type names are given.
     if all(t.name is not None for t in world.atom_types):
-        world.infer_topo_names_from_atoms(override=True)
+        world.infer_topo_names_from_atoms(override=False)
 
     _debug_print_resource()
     return world
