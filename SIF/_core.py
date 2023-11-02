@@ -433,7 +433,7 @@ class World:
  
     def _add_topo(self:'World', topo_name, *atoms, type_id:Union[int,str]=None):
         """Add a new topology of any type between any number of atoms (specified by index) to the system."""
-        
+
         if isinstance(type_id, str):
             type_id = self._topo_type_id_from_name(topo_name, type_id)
 
@@ -1017,7 +1017,10 @@ class World:
         for topo_kind in self._available_topo_types:
             topo_types = self._get_topo_type_list(topo_kind)
             new_type_names = [None] * len(topo_types)
-            for topo in self._get_topo_list(topo_kind):
+            topo_list = self._get_topo_list(topo_kind)
+            if not override:  # Find only elements where their type doesn't have a name yet.
+                topo_list = filter(lambda t : topo_types[t.type_id].name is None, topo_list)
+            for topo in topo_list:
                 atom_type_names = [self.atom_types[self.atoms[i].type_id].name for i in topo.get_atoms()]
                 atom_type_names = self._validate_topo_atoms(*atom_type_names)
                 new_name = "-".join(atom_type_names)

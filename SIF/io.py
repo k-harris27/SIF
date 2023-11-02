@@ -79,8 +79,21 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None, type_name_
                 else:
                     raise ValueError(f"Unexpected line in header: {line}")
 
+            elif "Type Labels" in section:
+                if len(words) != 2:
+                    raise ValueError(f"Invalid atom type label input: {line}")
+                type_id = int(words[0])-1
+                if section == "Atom Type Labels":
+                    world.atom_types[type_id].name = words[1]
+                    continue
+                # Probably not very efficient but there shouldn't be many types anyway...
+                for topo_kind in world._available_topo_types:
+                    if section == f"{topo_kind.capitalize()} Type Labels":
+                        topo_types = world._get_topo_type_list(topo_kind)
+                        type_id = int(words[0])-1
+                        topo_types[type_id].name = words[1]
+
             elif section == "Masses":
-                print(f"Atom Type: {words[0], words[1], comment}")
                 world.atom_types[int(words[0])-1].mass = float(words[1])
                 comment_words = comment.split()
                 if len(comment_words) == 1:  # Assume it's an atom type string
@@ -217,12 +230,30 @@ def write_lammps_data(world : World, path_to_file : str, comment : str = "") -> 
         file.write(f"{world.zlo} {world.zhi} zlo zhi\n")
         file.write("\n")
 
+        all_atom_names_defined = all(t.name is not None for t in world.atom_types)
+        if all_atom_names_defined:
+            file.write("Atom Type Labels\n\n")
+            for i,t in enumerate(world.atom_types):
+                file.write(f"{i+1} {t.name}\n")
+            file.write("\n")
+        
+            # Override = False will prevent this from overwriting
+            # if we've assigned manually/previously.
+            world.infer_topo_names_from_atoms(override=False)
+            for topo_kind in world._available_topo_types:
+                file.write(f"{topo_kind.capitalize()} Type Labels\n\n")
+                for i, topo_type in enumerate(world._get_topo_type_list(topo_kind)):
+                    file.write(f"{i+1} {topo_type.name}\n")
+                file.write("\n")
+
         # Masses section
         file.write("Masses\n")
         file.write("\n")
         for i,t in enumerate(world.atom_types):
             file.write(f"{i+1} {t.mass}\n")
         file.write("\n")
+
+
 
         # Atoms section
         file.write("Atoms\n")
