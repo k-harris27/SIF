@@ -1,10 +1,11 @@
 from ._core import *
 import resource
-from typing import Dict
+from typing import Dict, Tuple
+from SIF.forcefields import ForceField
 
-# TODO: Read in atom/bond type names
+# TODO: Read/Write molecule files properly too.
 
-def read_lammps_data(path_to_file : str, path_to_params : str = None, type_name_lookup : Dict[str,str] = None) -> World:
+def read_lammps_data(path_to_file : str, path_to_params : str = None, forcefield : ForceField = None) -> World:
     """Read LAMMPS .data file into a world object.\n
     path_to_file would be a .data file, path_to_params is optional and should direct to the file specifying interaction coefficients."""
     world = World()  # Create world instance to be populated
@@ -14,6 +15,8 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None, type_name_
     num_angles = None
     num_dihedrals = None
     num_impropers = None
+
+    if forcefield is not None: type_name_lookup = forcefield.atom_names
 
     warned_sections = []  # List of section names that unexpected warnings have been printed for. 
 
@@ -199,7 +202,7 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None, type_name_
                 
     # Infer topology names if all atom type names are given.
     if all(t.name is not None for t in world.atom_types):
-        world.infer_topo_names_from_atoms(override=False)
+        world.infer_topo_names_from_atoms(override=False, forcefield=forcefield)
 
     _debug_print_resource()
     return world
@@ -276,6 +279,7 @@ def read_react_template(path_to_file : str) -> World:
     with open(path_to_file,"r") as file:
         comment_line = True  # First line is comment
         n_types = {"atom":0,"bond":0,"angle":0,"dihedral":0,"improper":0}
+        type_labels = {key:[] for key in n_types.keys()}
         for line in file:
             if comment_line:
                 comment_line = False
@@ -296,10 +300,10 @@ def read_react_template(path_to_file : str) -> World:
             if section == "Headers":
                 val = int(words[0])
                 if words[1] == "atoms":
-                    world.atoms = [Atom(0,0,[0,0,0])] * range(val)
+                    world.atoms = [Atom(0,0,[0,0,0]) for _ in range(val)]
                 elif words[1] in ("bonds", "angles", "dihedrals", "impropers"):
-                    topo_name = words[1][:-1]
-                    topo = world._get_topo_list(topo_name)
+                    topo_kind = words[1][:-1]
+                    topo = world._get_topo_list(topo_kind)
                     topo.extend([None] * val)  # Uses mutability to set list (starts empty)
                 else:
                     raise ValueError(f"Unexpected line in header: {line}")
@@ -309,9 +313,8 @@ def read_react_template(path_to_file : str) -> World:
                 world.atoms[i].pos = pos
             elif section == "Types":
                 i = int(words[0])-1
-                type_id = int(words[1])-1
-                n_types["atom"] = max(n_types["atom"],type_id+1)
-                world.atoms[i].type_id = int(words[1])-1
+                type_id, n_types["atom"] = _read_react_type(words[1], n_types["atom"], type_labels["atom"])
+                world.atoms[i].type_id = type_id
             elif section == "Charges":
                 i = int(words[0])-1
                 world.atoms[i].charge = float(words[1])
@@ -320,22 +323,21 @@ def read_react_template(path_to_file : str) -> World:
                 atom_ids = [int(w)-1 for w in words[1:]]
                 world.add_fragment(frag_id,atom_ids)
             elif section in ("Bonds", "Angles", "Dihedrals", "Impropers"):
-                topo_name = section.lower()[:-1]
-                topo = world._get_topo_list(topo_name)
+                topo_kind = section.lower()[:-1]
+                topo = world._get_topo_list(topo_kind)
                 i = int(words[0])-1
-                topo_type = int(words[1])-1
-                n_types[topo_name] = max(n_types[topo_name],topo_type+1)
+                topo_type, n_types[topo_kind] = _read_react_type(words[1], n_types[topo_kind], type_labels[topo_kind])
                 atoms = world._validate_topo_atoms(*(int(w)-1 for w in words[2:]))
                 topo[i] = Topology(*atoms, type_id = topo_type)
             else:
                 raise ValueError(f"Unexpected section title in react template file: {section}")
 
-        world.atom_types = [None] * n_types["atom"]
+        world.atom_types = [AtomType(0.0, name) for name in type_labels["atom"]]
 
-        for topo_name in ("bond","angle","dihedral","improper"):
-            param_list = world._get_topo_type_list(topo_name)
-            logger.debug(f"{topo_name}: {n_types[topo_name]}")
-            param_list.extend([None] * n_types[topo_name])
+        for topo_kind in ("bond","angle","dihedral","improper"):
+            param_list = world._get_topo_type_list(topo_kind)
+            logger.debug(f"{topo_kind}: {n_types[topo_kind]}")
+            param_list.extend(TopologyType(0.0, name=name) for name in type_labels[topo_kind])
     
     return world
 
@@ -343,6 +345,10 @@ def write_react_template(world : World, path_to_file : str, comment : str = "") 
     """
     Write world to file in react .template format
     """
+
+    all_type_labels_defined = all(t.name is not None for t in world.atom_types)
+    if all_type_labels_defined:
+        world.infer_topo_names_from_atoms(override=False)  # Override=False only updates unset type labels
 
     with open(path_to_file, "w") as file:
         # Comments
@@ -369,7 +375,10 @@ def write_react_template(world : World, path_to_file : str, comment : str = "") 
         file.write("Types\n")
         file.write("\n")
         for i,a in enumerate(world.atoms):
-            file.write(f"{i+1} {a.type_id+1}\n")
+            t = a.type_id + 1  # Conversion to LAMMPS type.
+            if all_type_labels_defined:
+                t =  world.atom_types[a.type_id].name  # Use atom type name if possible.
+            file.write(f"{i+1} {t}\n")
         file.write("\n")
 
         # Charges section
@@ -389,19 +398,56 @@ def write_react_template(world : World, path_to_file : str, comment : str = "") 
             file.write("\n")
 
         # Topology sections
-        for topo_name in ("bond","angle","dihedral","improper"):
-            topo = world._get_topo_list(topo_name)
-            header_text = topo_name.capitalize() + "s"
-            if len(topo) > 0: _write_lammps_topo(header_text,topo,file)
+        for topo_kind in world._available_topo_types:
+            topo = world._get_topo_list(topo_kind)
+            type_names = [t.name for t in world._get_topo_type_list(topo_kind)]
+            header_text = topo_kind.capitalize() + "s"
+            if len(topo) > 0: _write_lammps_topo(header_text,topo,file, type_names = type_names)
 
-        
+
 # Used to write any topo sections for lammps-style files
-def _write_lammps_topo(topo_name:str, topo:List[Topology], file):
-    file.write(topo_name + "\n")
+def _write_lammps_topo(header:str, topo:List[Topology], file, type_names = None):
+    file.write(header + "\n")
     file.write("\n")
     for i,t in enumerate(topo):
-        file.write(f"{i+1} {t.type_id+1} {' '.join([str(a+1) for a in t])}\n")
+        tp = t.type_id+1
+        if type_names is not None:
+            tp = type_names[t.type_id]
+        file.write(f"{i+1} {tp} {' '.join([str(a+1) for a in t])}\n")
     file.write("\n")
+
+def _read_react_type(read_type : str, n_types : int, type_labels : List[str]) -> Tuple[int,int]:
+    """Works for atoms and topology. Takes in the type read from template file,
+        and returns the new total number of types as well as the atom type number.
+        
+        Parameters
+        ----------
+        read_type : str
+            Type read from file (may be a digit string if type labels aren't used).
+        n_types : int
+            Current minimum number of types.
+        type_labels : list[str]
+            Current list of all identified type labels.
+
+        Returns
+        -------
+        type_id : int
+            Input atom type index.
+        new_n_types : int
+            New minimum number of types.
+    """
+    
+    if read_type.isdigit():
+        type_id = int(read_type)-1
+        n_types = max(n_types,type_id+1)
+    elif read_type not in type_labels:
+        type_id = n_types
+        n_types += 1
+        type_labels.append(read_type)
+    else:
+        type_id = type_labels.index(read_type)
+    return type_id, n_types
+
 
 def _debug_print_resource():
     logger.debug('Peak Memory Usage =', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)

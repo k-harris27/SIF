@@ -874,7 +874,7 @@ class World:
 
         return (type_name in (t.name for t in type_list))
     
-    def _validate_topo_atoms(self, *atom_ids):
+    def _validate_topo_atoms(self, *atom_ids, ignore_ndef=False):
         """Used to check bond/angle/dihedral atom inputs are valid and order them properly"""
         # Check atom indices are integers
         if not all(isinstance(a, int) for a in atom_ids) and not all(isinstance(a, str) for a in atom_ids):
@@ -884,6 +884,9 @@ class World:
         if atom_ids[0] > atom_ids[-1]:
             atom_ids = atom_ids[::-1]  # Reverses tuple of atoms
 
+        if ignore_ndef:
+            return list(atom_ids)
+        
         for at in atom_ids:
             if isinstance(at, int) and at >= self.n_atoms:
                 raise ValueError(f"Atom index {at} is out of bounds.")
@@ -1004,7 +1007,7 @@ class World:
         elif topo_name == "improper": return self.improper_types
         else: raise ValueError(f"{repr(topo_name)} is not a valid value of topo_name.")
 
-    def infer_topo_names_from_atoms(self, override=True):
+    def infer_topo_names_from_atoms(self, override=True, forcefield = None):
         """
         Uses atom type names to infer topology type names.
         
@@ -1012,7 +1015,12 @@ class World:
         ----------
         override : str (default = True)
             If true, topology with names already set will have their names overwritten.
+        forcefield : SIF.forcefields.ForceField (optional)
+            If provided, the forcefield.topo_equivs is used to identify atom types that share topological properties.
         """
+
+        # TODO: Define a FF topology equivalence dictionary or something,
+        #       To capture the internal OPLS-AA topology types.
 
         for topo_kind in self._available_topo_types:
             topo_types = self._get_topo_type_list(topo_kind)
@@ -1021,8 +1029,14 @@ class World:
             if not override:  # Find only elements where their type doesn't have a name yet.
                 topo_list = filter(lambda t : topo_types[t.type_id].name is not None, topo_list)
             for topo in topo_list:
-                atom_type_names = [self.atom_types[self.atoms[i].type_id].name for i in topo.get_atoms()]
-                atom_type_names = self._validate_topo_atoms(*atom_type_names)
+                atoms = topo.get_atoms()
+                atom_type_names = [None] * len(atoms)
+                for i, atom_id in enumerate(atoms):
+                    name = self.atom_types[self.atoms[atom_id].type_id].name
+                    if forcefield is not None and name in forcefield.topo_equivs:
+                        name = forcefield.topo_equivs[name]
+                    atom_type_names[i] = name
+                atom_type_names = self._validate_topo_atoms(*atom_type_names, ignore_ndef=True)
                 new_name = "-".join(atom_type_names)
                 
                 # Check any other attempts we've made this time have given the same name.

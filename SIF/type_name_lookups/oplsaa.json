@@ -1,14 +1,23 @@
 {
-    "type80"    : "CT",
-    "type85"    : "HC",
-    "type90"    : "CA",
-    "type91"    : "HA",
-    "type96"    : "OH",
-    "type97"    : "HO",
-    "type122"   : "OS",
-    "type730"   : "NH2",
-    "type731"   : "NRH",
-    "type732"   : "NR2",
-    "type739"   : "H2N",
-    "type740"   : "HNR"
+    "atom_names" : {
+        "type80"    : "CT",
+        "type85"    : "HC",
+        "type90"    : "CA",
+        "type91"    : "HA",
+        "type96"    : "OH",
+        "type97"    : "HO",
+        "type122"   : "OS",
+        "type730"   : "NT",
+        "type731"   : "NRH",
+        "type732"   : "NR2",
+        "type739"   : "H2N",
+        "type740"   : "HNR"
+    },
+
+    "topo_equivs" : {
+        "NRH" : "NT",
+        "NR2" : "NT",
+        "H2N" : "HN",
+        "HNR" : "HN"
+    }
 }
