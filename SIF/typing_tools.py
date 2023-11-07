@@ -25,7 +25,7 @@ def update_types_to_match(target : World, reference : World, debug : bool = Fals
                 logger.debug(f"Inserting {topo_name} params {topo_type} at ID {i}.")
                 target._add_topo_type(topo_name, topo_type.copy(), topo_id = i)  # Insert new topology type & update all existing topology to the correct types.
 
-def change_atom_type(world : World, new_type : Union[int,AtomType], target_type : Union[int,str] = None, target_indices : Iterable[int] = None,):
+def change_atom_type(world : World, new_type : Union[int,str,AtomType], target_type : Union[int,str] = None, target_indices : Iterable[int] = None,):
     """
     Change the types of atoms matching a range of different requirements. Directly modifies the supplied world.\n
     NOTE: Has no effect on any topology - this is mainly intended for being able to distinguish atoms in post-processing.
@@ -34,8 +34,8 @@ def change_atom_type(world : World, new_type : Union[int,AtomType], target_type 
     ----------
     world : World
         World object containing atoms etc.
-    new_type : int | AtomType
-        Atom type integer to set selected atoms to. Can be 0<=i<n_atom_types, or a new AtomType object, which is appended if given.
+    new_type : int | str | AtomType
+        Atom type integer/label to set selected atoms to. Can be 0<=i<n_atom_types, or a new AtomType object, which is appended if given.
     target_type : int | string (optional)
         Select atoms with this original atom type, defined by other type ID (int) or type name (string).
     target_indices : Iterable[int] (optional)

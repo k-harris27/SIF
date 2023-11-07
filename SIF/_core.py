@@ -1019,8 +1019,7 @@ class World:
             If provided, the forcefield.topo_equivs is used to identify atom types that share topological properties.
         """
 
-        # TODO: Define a FF topology equivalence dictionary or something,
-        #       To capture the internal OPLS-AA topology types.
+        # TODO: Identify wildcards in topology types (particularly dihedrals)
 
         for topo_kind in self._available_topo_types:
             topo_types = self._get_topo_type_list(topo_kind)
