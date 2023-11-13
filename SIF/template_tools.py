@@ -3,7 +3,7 @@ from typing import List,Set
 from .io import *
 from ._core import *
 
-def get_connected_atoms(world : World, atom_ids : List[int], extent : int = 3, return_equivalences : bool = False) -> World:
+def get_connected_atoms(world : World, atom_ids : List[int], extent : Union[int,List[int]] = 3, return_equivalences : bool = False) -> World:
     """
     Returns a new world containing only the atoms connected by (extent) number of bonds
     to the atoms of ids given in atom_ids.
@@ -33,14 +33,17 @@ def get_connected_atoms(world : World, atom_ids : List[int], extent : int = 3, r
         except:
             raise TypeError(f"Atom IDs must be either an int or list of ints, not {type(atom_ids)}.")
         
-    try:
-        extent = int(extent)
-    except:
-        raise TypeError(f"extent must be an int, not {type(extent)}.")
+    assert isinstance(extent, int) or isinstance(extent, Iterable), f"extent must be an int or iterable[int], not {type(extent)}."
+
+    if isinstance(extent, Iterable):
+        assert(len(extent) == len(atom_ids))
 
     keep_atoms = set(atom_ids)
-    for atom in atom_ids:
-        keep_atoms.update(depth_limited_search(world,depth=3,start_atom=atom))
+    _extent = extent
+    for i, atom in enumerate(atom_ids):
+        if isinstance(extent, Iterable):
+            _extent = extent[i]
+        keep_atoms.update(depth_limited_search(world,depth=_extent,start_atom=atom))
 
     return world.get_isolated_atoms(keep_atoms,return_equivalences=return_equivalences)
     
