@@ -2,13 +2,6 @@ import json
 from pathlib import Path
 from typing import Dict
 
-# Attributes are added dynamically when we load the json.
-class ForceField(object):
-    def __init__(self, atom_names:Dict[str,str]=None, topo_equivs:Dict[str,str]=None):
-        self.atom_names = atom_names
-        self.topo_equivs = topo_equivs
-
-
 class ForceFields:
 
     # Decorator to only load FFs once and return as an object.
@@ -16,8 +9,7 @@ class ForceFields:
         def inner():
             if not hasattr(loader, "ff"):
                 ff_dict = loader()
-                ff_obj = ForceField(**ff_dict)
-                loader.ff = ff_obj
+                loader.ff = ff_dict
             return loader.ff
         return inner
     
@@ -28,7 +20,7 @@ class ForceFields:
 
     @staticproperty
     @_forcefield
-    def oplsaa() -> ForceField:
+    def oplsaa() -> Dict:
         with open(f"{ForceFields._forcefield_dir()}/oplsaa.json") as file:
             ff_text = file.read()
         return json.loads(ff_text)
