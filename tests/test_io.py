@@ -85,3 +85,17 @@ def test_inferred_atom_equivalences(oplsaa_world : SIF.World):
 def test_inferred_dihedrals(oplsaa_world : SIF.World):
     world = oplsaa_world
     assert world.dihedral_types[13].name == "ttX-tt013-tt020-tt013"
+
+def test_all_inferred_dihedrals(oplsaa_world : SIF.World):
+    world = oplsaa_world
+    dihedral_names = [t.name for t in world.dihedral_types]
+    available_names = ["-".join(atoms) for atoms in ForceFields.oplsaa["dihedrals"]]
+    assert all(name in available_names for name in dihedral_names)
+
+def test_inferred_impropers(oplsaa_world : SIF.World):
+    world = oplsaa_world
+    improper_names = [t.name for t in world.improper_types]
+    available_names = ["-".join(atoms) for atoms in ForceFields.oplsaa["impropers"]]
+    print(improper_names)
+    assert False
+    #assert all(name in available_names for name in improper_names)
