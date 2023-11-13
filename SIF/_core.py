@@ -12,6 +12,7 @@ from copy import deepcopy
 import logging
 import numpy as np
 import itertools
+import warnings
 
 # Logger object, for nicely formatting warnings, errors etc.
 logger = logging.getLogger(__name__)
@@ -177,7 +178,7 @@ class TopologyType:
             raise TypeError("Some topology interaction parameters were not floats!")
 
         self.parameters=params
-        self.name = str(name)
+        self.name = str(name) if name is not None else None
 
     def __copy__(self:'TopologyType'):
         return TopologyType(*self.parameters,name=self.name)
@@ -194,7 +195,7 @@ class World:
     #   a problem.
     _available_topo_types = ("bond","angle","dihedral","improper")
     
-    def __init__(self, xlo=0., ylo=0., zlo=0., xhi=0., yhi=0., zhi=0.):
+    def __init__(self, xlo=0., ylo=0., zlo=0., xhi=0., yhi=0., zhi=0., forcefield=None):
         
         # Box Dimensions
         self.xlo = xlo
@@ -203,6 +204,8 @@ class World:
         self.yhi = yhi
         self.zlo = zlo
         self.zhi = zhi
+
+        self.forcefield = forcefield
 
         # Atoms & topology
         self.atoms : List[Atom] = []
@@ -770,7 +773,7 @@ class World:
         existing_names = [t.name for t in param_list]
 
         # Don't add new topology if one already exists with the same name.
-        new_topo_types = [t for t in new_topo_types if t.name is not None and t.name not in existing_names]
+        new_topo_types = [t for t in new_topo_types if t.name is None or t.name not in existing_names]
 
         param_list.extend(new_topo_types)
 
@@ -881,8 +884,7 @@ class World:
             raise Exception(f"One or more atom indices in {atom_ids} is not an integer or string.")
         
         # Ensure first atom index is smaller than last
-        if atom_ids[0] > atom_ids[-1]:
-            atom_ids = atom_ids[::-1]  # Reverses tuple of atoms
+        atom_ids = World._order_topo_atoms(*atom_ids)
 
         if ignore_ndef:
             return list(atom_ids)
@@ -894,6 +896,14 @@ class World:
                 raise ValueError(f"Atom type name {at} is not defined.")
 
         return list(atom_ids)
+
+    def _order_topo_atoms(*atom_ids) -> List[Union[int,str]]:
+        atom_ids = list(atom_ids)
+        if atom_ids[0] > atom_ids[-1]:
+            atom_ids = atom_ids[::-1]
+        elif len(atom_ids) > 3 and atom_ids[0] == atom_ids[-1]:
+            atom_ids[1:-1] = World._order_topo_atoms(*atom_ids[1:-1])
+        return atom_ids
 
     def _shift_atom_types(self, target_type_range, shift : int) -> None:
         """Shift the atom type numbers of atoms in the world. Useful for when atom types are added/removed within the list.
@@ -1007,7 +1017,7 @@ class World:
         elif topo_name == "improper": return self.improper_types
         else: raise ValueError(f"{repr(topo_name)} is not a valid value of topo_name.")
 
-    def infer_topo_names_from_atoms(self, override=True, forcefield = None):
+    def infer_topo_names_from_atoms(self, override=True):
         """
         Uses atom type names to infer topology type names.
         
@@ -1020,33 +1030,56 @@ class World:
         """
 
         # TODO: Identify wildcards in topology types (particularly dihedrals)
+        # NOTE: Might be too unstable to infer - if carrying through this should be done
+        #       using moltemplate's OPLSAA dihedral database.
+        #       Maybe we use t### for atom type names in future..?
+
+        ff = self.forcefield
+        if ff is None:
+            warnings.warn("Topology inference without an assigned forcefield isn't implemented! Skipping...")
+            return
+
+        def topo_matcher(t1, t2):
+            if t1 == [] and t2 == []:
+                return True
+            if t1[0] == t2[0] or t1[0] == "ttX" or t2[0] == "ttX":
+                return topo_matcher(t1[1:], t2[1:])
+            return False
 
         for topo_kind in self._available_topo_types:
             topo_types = self._get_topo_type_list(topo_kind)
-            new_type_names = [None] * len(topo_types)
             topo_list = self._get_topo_list(topo_kind)
-            if not override:  # Find only elements where their type doesn't have a name yet.
-                topo_list = filter(lambda t : topo_types[t.type_id].name is not None, topo_list)
+
+            # Find only elements where their type doesn't have a name yet.
+            if not override:
+                topo_list = filter(lambda t : topo_types[t.type_id].name is None, topo_list)
+
             for topo in topo_list:
-                atoms = topo.get_atoms()
-                atom_type_names = [None] * len(atoms)
-                for i, atom_id in enumerate(atoms):
-                    name = self.atom_types[self.atoms[atom_id].type_id].name
-                    if forcefield is not None and name in forcefield.topo_equivs:
-                        name = forcefield.topo_equivs[name]
-                    atom_type_names[i] = name
-                atom_type_names = self._validate_topo_atoms(*atom_type_names, ignore_ndef=True)
-                new_name = "-".join(atom_type_names)
-                
-                # Check any other attempts we've made this time have given the same name.
-                old_new_name = new_type_names[topo.type_id]
-                if old_new_name is None:
-                    new_type_names[topo.type_id] = new_name
-                elif old_new_name != new_name:
-                    logger.warning(f"The same {topo_kind} type has been given two different names: {old_new_name} and {new_name}.")
+                topo_atoms = topo.get_atoms()
+                atom_type_names = [self.atom_types[self.atoms[a].type_id].name for a in topo_atoms]
+                atom_topo_names = [ff["type_to_topo"][name] for name in atom_type_names]
+                new_topo_name = ""
+                atom_topo_names = self._validate_topo_atoms(*atom_topo_names, ignore_ndef=True)
+                if topo_kind+"s" not in ff.keys():
+                    new_topo_name = atom_topo_names
                 else:
-                    continue  # We already assigned the same name before, no need to do it again.
-                topo_types[topo.type_id].name = new_name
+                    candidates = []
+                    for available_type in ff[topo_kind+"s"]:
+                        if topo_matcher(atom_topo_names, available_type) or topo_matcher(atom_topo_names[::-1], available_type):
+                            candidates.append(available_type)
+                    if len(candidates) > 1:
+                        wildcard_counts = [t.count("ttX") for t in candidates]
+                        chosen_i = min(range(len(wildcard_counts)), key=wildcard_counts.__getitem__)
+                    else:
+                        chosen_i = 0
+                    chosen = candidates[chosen_i]
+                    new_topo_name = chosen
+                new_topo_name = "-".join(new_topo_name)
+                topo_type = topo_types[topo.type_id]
+                if topo_type.name is None:
+                    topo_type.name = new_topo_name
+                elif topo_type.name != new_topo_name:
+                    raise ValueError(f"Two different topo names have been identified for the same type. This shouldn't happen. {topo_type.name} : {new_topo_name}")
 
 
 def lammps_index(i : int):

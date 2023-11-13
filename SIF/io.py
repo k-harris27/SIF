@@ -1,22 +1,19 @@
 from ._core import *
 import resource
 from typing import Dict, Tuple
-from SIF.forcefields import ForceField
 
 # TODO: Read/Write molecule files properly too.
 
-def read_lammps_data(path_to_file : str, path_to_params : str = None, forcefield : ForceField = None) -> World:
+def read_lammps_data(path_to_file : str, path_to_params : str = None, forcefield : Dict = None) -> World:
     """Read LAMMPS .data file into a world object.\n
     path_to_file would be a .data file, path_to_params is optional and should direct to the file specifying interaction coefficients."""
-    world = World()  # Create world instance to be populated
+    world = World(forcefield=forcefield)  # Create world instance to be populated
 
     num_atoms = None
     num_bonds = None
     num_angles = None
     num_dihedrals = None
     num_impropers = None
-
-    if forcefield is not None: type_name_lookup = forcefield.atom_names
 
     warned_sections = []  # List of section names that unexpected warnings have been printed for. 
 
@@ -99,11 +96,11 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None, forcefield
             elif section == "Masses":
                 world.atom_types[int(words[0])-1].mass = float(words[1])
                 comment_words = comment.split()
-                if len(comment_words) == 1:  # Assume it's an atom type string
+                if len(comment_words) == 1 and "type" in comment_words[0] :  # Assume it's an atom type string
                     name = comment_words[0]
-                    if type_name_lookup is not None:
-                        name = type_name_lookup[name]
-                    world.atom_types[int(words[0])-1].name = name
+                    digits = int(name[4:])
+                    fname = f"t{digits:03d}"
+                    world.atom_types[int(words[0])-1].name = fname
 
             elif section == "Atoms":
                 """
@@ -201,10 +198,11 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None, forcefield
                         topo_types[id].parameters = params
                 
     # Infer topology names if all atom type names are given.
-    if all(t.name is not None for t in world.atom_types):
-        world.infer_topo_names_from_atoms(override=False, forcefield=forcefield)
+    if world.forcefield is not None and all(t.name is not None for t in world.atom_types):
+        world.infer_topo_names_from_atoms(override=False)
 
     _debug_print_resource()
+
     return world
 
 def write_lammps_data(world : World, path_to_file : str, comment : str = "") -> None:
@@ -242,12 +240,20 @@ def write_lammps_data(world : World, path_to_file : str, comment : str = "") -> 
         
             # Override = False will prevent this from overwriting
             # if we've assigned manually/previously.
-            world.infer_topo_names_from_atoms(override=False)
+            if world.forcefield is not None:
+                world.infer_topo_names_from_atoms(override=False)
+            
+            raise_warn = False
             for topo_kind in world._available_topo_types:
                 file.write(f"{topo_kind.capitalize()} Type Labels\n\n")
                 for i, topo_type in enumerate(world._get_topo_type_list(topo_kind)):
+                    if topo_type.name is None:
+                        raise_warn = True
+                        continue  # Don't write if we don't have a name for it.
                     file.write(f"{i+1} {topo_type.name}\n")
                 file.write("\n")
+            if raise_warn:
+                warnings.warn("Not all topology types had type labels assigned! Consider applying a forcefield to the World.")
 
         # Masses section
         file.write("Masses\n")
@@ -272,8 +278,8 @@ def write_lammps_data(world : World, path_to_file : str, comment : str = "") -> 
             if len(topo) > 0: _write_lammps_topo(header_text,topo,file)
 
 
-def read_react_template(path_to_file : str) -> World:
-    world = World()  # Create world instance to be populated
+def read_react_template(path_to_file : str, forcefield : Dict = None) -> World:
+    world = World(forcefield=forcefield)  # Create world instance to be populated
 
     section = "Headers"  # We start with headers
     with open(path_to_file,"r") as file:
@@ -347,7 +353,7 @@ def write_react_template(world : World, path_to_file : str, comment : str = "") 
     """
 
     all_type_labels_defined = all(t.name is not None for t in world.atom_types)
-    if all_type_labels_defined:
+    if all_type_labels_defined and world.forcefield is not None:
         world.infer_topo_names_from_atoms(override=False)  # Override=False only updates unset type labels
 
     with open(path_to_file, "w") as file:

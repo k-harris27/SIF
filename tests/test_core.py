@@ -22,6 +22,7 @@ def three_bonded_world(three_atom_world : SIF.World) -> SIF.World:
         world.add_bond(i, (i+1) % 3, b_type)
     return world
 
+
 def test_add_atom_type(empty_world : SIF.World):
     empty_world.add_atom_type(12.0, "C")
     assert empty_world.atom_types[0].name == "C"
@@ -55,3 +56,7 @@ def test_get_bond_index(three_bonded_world : SIF.World):
 
 def test_validate_topo_atoms(three_atom_world : SIF.World):
     assert three_atom_world._validate_topo_atoms(2,0,1) == [1,0,2]
+
+def test_validate_dihedral_atoms():
+    world = SIF.World()
+    assert world._validate_topo_atoms(0,2,1,0, ignore_ndef=True) == [0,1,2,0]
