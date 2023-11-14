@@ -1057,7 +1057,10 @@ class World:
             for topo in topo_list:
                 topo_atoms = topo.get_atoms()
                 atom_type_names = [self.atom_types[self.atoms[a].type_id].name for a in topo_atoms]
-                atom_topo_names = [ff["type_to_topo"][name] for name in atom_type_names]
+                try:
+                    atom_topo_names = [ff["type_to_topo"][name] for name in atom_type_names]
+                except KeyError as err:
+                    raise ValueError("Topology type")
                 new_topo_name = ""
                 atom_topo_names = self._validate_topo_atoms(*atom_topo_names, ignore_ndef=True)
                 if topo_kind+"s" not in ff.keys():
