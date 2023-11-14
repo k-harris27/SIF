@@ -4,26 +4,40 @@ from ._core import *
 from typing import List,Union
 
 def update_types_to_match(target : World, reference : World, debug : bool = False) -> None:
-    """Update the (TODO: atom) and topo types of target to be the same as reference.\n
+    """Update the atom and topology types of target to be the same as reference.\n
     Apply to a system where all types in target are in reference, but not all types in reference are in target.\n
     Assumes all topology already in target is ordered the same as in the reference world.\n
-    WARNING: Cannot currently differentiate between different atom types of the same mass, so atoms are not handled. Not sure how to???"""
+    WARNING: Atom types can only be updated if all atoms have associated type labels."""
 
-    for topo_name in World._available_topo_types:
-        targ_types = target._get_topo_type_list(topo_name)
-        ref_types = reference._get_topo_type_list(topo_name)
+    # Atoms - only if all atom types in both worlds have names
+    if all(t.name is not None for atom_types in (target.atom_types, reference.atom_types) for t in atom_types):
+        names_in_target = [t.name for t in target.atom_types]
+        current_target_type_id = 0
+        for i,atom_type in enumerate(reference.atom_types):
+            if atom_type.name not in names_in_target:
+                logger.debug(f"Inserting atom type {atom_type.name} to position {i}.")
+                target.add_atom_type(atom_type.mass, atom_type.name, index=i)
+    else:
+        logger.warning("Not all atom types had names assigned! Atom type names couldn't be updated.")
+
+    # Topology
+    for topo_kind in World._available_topo_types:
+        targ_types = target._get_topo_type_list(topo_kind)
+        ref_types = reference._get_topo_type_list(topo_kind)
 
         if len(targ_types) > len(ref_types):
-            raise ValueError(f"Reference world ({len(ref_types)} {topo_name}) should have more types than target world ({len(targ_types)} {topo_name}).")
+            raise ValueError(f"Reference world ({len(ref_types)} {topo_kind}) should have more types than target world ({len(targ_types)} {topo_kind}).")
 
         current_target_type_id = 0
         targ_types_old = copy(targ_types)  # We can edit targ_types on the go while keeping a copy of the original
         for i,topo_type in enumerate(ref_types):
-            if topo_type == targ_types_old[current_target_type_id]:
+            if topo_type.name == targ_types_old[current_target_type_id].name:
+                if topo_type.parameters != targ_types_old[current_target_type_id].parameters:
+                    logger.warning("{topo_name} types with the same name but different parameters were found during type updating! Using target world values.")
                 current_target_type_id += 1
             else:
-                logger.debug(f"Inserting {topo_name} params {topo_type} at ID {i}.")
-                target._add_topo_type(topo_name, topo_type.copy(), topo_id = i)  # Insert new topology type & update all existing topology to the correct types.
+                logger.debug(f"Inserting {topo_kind} params {topo_type} at ID {i}.")
+                target._add_topo_type(topo_kind, *topo_type.parameters, topo_id = i, type_name=topo_type.name)  # Insert new topology type & update all existing topology to the correct types.
 
 def change_atom_type(world : World, new_type : Union[int,str,AtomType], target_type : Union[int,str] = None, target_indices : Iterable[int] = None,):
     """

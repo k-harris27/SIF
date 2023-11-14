@@ -1,4 +1,5 @@
 import SIF
+import SIF.io
 import argparse
 
 """
@@ -23,17 +24,12 @@ def main():
     d_out = args.data_out
     s_in = args.settings_in
     s_ref = args.settings_ref
-    atom_types = read_new_atom_types(args)
 
     # Read in topology & settings (Forcefield) info of world to have atom/topo types added.
     world = SIF.io.read_lammps_data(d_in,s_in)
     
     # Read in topology & settings (Forcefield) info of world used to take atom/topo types from (reference).
     ref = SIF.io.read_lammps_data(d_ref,s_ref)
-    
-    # Atom types have to be added manually currently...
-    for t in atom_types:
-        world.add_atom_type(type_id=t[0],mass=t[1])
     
     # Update topology types of world to match ref, then checks that there are no actual bonds of the new types.
     # The print lines will break if the topology list breaks - things seem to work fine so can probably
@@ -64,11 +60,6 @@ def read_args():
     parser.add_argument("-R", "--settings-ref", action="store", required=True,
 			help="Path to topology reference .in.settings file.",
 			metavar="FILE")
-    parser.add_argument("-a", "--atom-type", action="extend", required=False,
-			default=None, nargs="+",
-			help=("Atom type index (integer) to insert "
-				"& corresponding mass (float)."),
-			metavar="'TYPE,MASS'")
     """
     parser.add_argument("-p", "--no-pair-coeffs", action="store_true",
 			help=("If this flag is set, atom pair coefficients "
@@ -76,34 +67,5 @@ def read_args():
     """
 
     return parser.parse_args()
-
-
-def read_new_atom_types(args):
-    """Interpret the atom type list from strings to numbers."""
-    list_in = args.atom_type    
-    list_out = []
-
-    # If no atom types were assigned, return an empty list.
-    if list_in is None: return []
-    
-    # If atom types were assigned, we need to interpret the strings into a proper list.
-    for itm in list_in:
-        type_id,mass = itm.split(",")
-
-        # Checking we have sensible values.
-        try:
-            type_id = int(type_id) - 1  # -1 to convert LAMMPS index to python index.
-        except ValueError as e:
-            raise ValueError(f"Atom type IDs must be integers. "
-			     "A non-integer has been received: {type_id}") from e
-        try:
-            mass = float(mass)
-        except ValueError as e:
-            raise ValueError(f"Atom mass must be a decimal number. "
-			     "A non-decimal has been received: {mass}") from e
-
-        list_out.append((type_id,mass))  
-
-    return list_out
 
 main()

@@ -96,6 +96,4 @@ def test_inferred_impropers(oplsaa_world : SIF.World):
     world = oplsaa_world
     improper_names = [t.name for t in world.improper_types]
     available_names = ["-".join(atoms) for atoms in ForceFields.oplsaa["impropers"]]
-    print(improper_names)
-    assert False
-    #assert all(name in available_names for name in improper_names)
+    assert all(name in available_names for name in improper_names)

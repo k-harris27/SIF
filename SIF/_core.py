@@ -803,14 +803,14 @@ class World:
             self.atom_types.append(aType)
             return
         index = int(index)
-        if index < len(self.n_atom_types):
+        if index < self.n_atom_types:
             self.atom_types.insert(index,aType)
             # We just changed all atom type indices above index type_id, so we need to shift all references to them.
             self._shift_atom_types(range(index,self.n_atom_types),shift=+1)
         else:
             raise ValueError(f"type_id must be between 0 and the number of existing atom types ({self.n_atom_types}), inclusive. Received {index}.")
 
-    def _add_topo_type(self, topo_name, *params, topo_id = "append", type_name:str=None):
+    def _add_topo_type(self, topo_kind, *params, topo_id = "append", type_name:str=None):
         """
         Add a bond, angle, ... type, with given interaction parameters and optional name.
 
@@ -822,10 +822,10 @@ class World:
         """
 
         # Get list of relevant topology types
-        type_list = self._get_topo_type_list(topo_name)
+        type_list = self._get_topo_type_list(topo_kind)
 
         if type_name is not None and type_name in (t.name for t in type_list):
-            logger.warning(f"{topo_name.capitalize()} type with name {type_name} already exists!")
+            logger.warning(f"{topo_kind.capitalize()} type with name {type_name} already exists!")
             return
 
         topoType = TopologyType(*params, name=type_name)
@@ -836,10 +836,10 @@ class World:
         if topo_id == "append":
             topo_id = n_types
         elif topo_id not in range(0, n_types+1):
-            raise ValueError(f"{topo_name.capitalize()} type index {topo_id} is out of bounds.")
+            raise ValueError(f"{topo_kind.capitalize()} type index {topo_id} is out of bounds.")
         
         # Offset topology type references in topology list
-        self._shift_topo_types(topo_name, range(topo_id,n_types), shift = +1)
+        self._shift_topo_types(topo_kind, range(topo_id,n_types), shift = +1)
 
         # Insert bond type at relevant index
         type_list.insert(topo_id, topoType)
