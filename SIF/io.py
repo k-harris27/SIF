@@ -190,10 +190,14 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None, forcefield
                 if words[0] == "pair_coeff":
                     pass  # TODO: Storing pair coefficients???
                 # Collect and store topology parameters. There's better ways to do this but eh.
-                for topo_name in ("bond","angle","dihedral","improper"):
-                    if words[0] == f"{topo_name}_coeff":
-                        topo_types = world._get_topo_type_list(topo_name)
-                        id = int(words[1])-1
+                for topo_kind in ("bond","angle","dihedral","improper"):
+                    if words[0] == f"{topo_kind}_coeff":
+                        topo_types = world._get_topo_type_list(topo_kind)
+                        if words[1].isdigit():
+                            id = int(words[1])-1
+                        else:
+                            type_names = [t.name for t in world._get_topo_type_list(topo_kind)]
+                            id = type_names.index(type_names)
                         params = [float(w) for w in words[2:]]
                         topo_types[id].parameters = params
                 
