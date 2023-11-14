@@ -31,9 +31,10 @@ def update_types_to_match(target : World, reference : World, debug : bool = Fals
         current_target_type_id = 0
         targ_types_old = copy(targ_types)  # We can edit targ_types on the go while keeping a copy of the original
         for i,topo_type in enumerate(ref_types):
-            if topo_type.name == targ_types_old[current_target_type_id].name:
+            targ_type = targ_types_old[current_target_type_id]
+            if topo_type.name is not None and targ_type.name is not None and topo_type.name == targ_type.name:
                 if topo_type.parameters != targ_types_old[current_target_type_id].parameters:
-                    logger.warning("{topo_name} types with the same name but different parameters were found during type updating! Using target world values.")
+                    logger.warning(f"{topo_kind} types with the same name but different parameters were found during type updating! Using target world values.")
                 current_target_type_id += 1
             else:
                 logger.debug(f"Inserting {topo_kind} params {topo_type} at ID {i}.")

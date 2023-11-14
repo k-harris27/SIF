@@ -1,5 +1,6 @@
 import SIF
 import SIF.io
+from SIF.forcefields import ForceFields
 import argparse
 
 """
@@ -26,10 +27,10 @@ def main():
     s_ref = args.settings_ref
 
     # Read in topology & settings (Forcefield) info of world to have atom/topo types added.
-    world = SIF.io.read_lammps_data(d_in,s_in)
+    world = SIF.io.read_lammps_data(d_in,s_in, ForceFields.oplsaa)
     
     # Read in topology & settings (Forcefield) info of world used to take atom/topo types from (reference).
-    ref = SIF.io.read_lammps_data(d_ref,s_ref)
+    ref = SIF.io.read_lammps_data(d_ref,s_ref, ForceFields.oplsaa)
     
     # Update topology types of world to match ref, then checks that there are no actual bonds of the new types.
     # The print lines will break if the topology list breaks - things seem to work fine so can probably
