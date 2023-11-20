@@ -1017,6 +1017,41 @@ class World:
         elif topo_name == "improper": return self.improper_types
         else: raise ValueError(f"{repr(topo_name)} is not a valid value of topo_name.")
 
+    def expand_type_label(self, label_kind : str, topo_type : Union[str,int]):
+        """
+        Takes a topology/atom type label and returns the integer ID of that interaction type.
+        If an integer string is given, int(topo_type)-1 is returned to convert from LAMMPS to internal ID.
+
+        Arguments
+        ---------
+        label_kind : str
+            The type of interaction - usually "atom", "bond", "angle", "dihedral" or "improper".
+        topo_type : str or int
+            The type label used for the interaction.
+
+        Returns
+        -------
+        int - The interaction ID index the type label refers to.
+        """
+        if topo_type.isdigit():
+            return int(topo_type)-1
+        
+        label_kind = label_kind.lower()
+        
+        if label_kind == "atom":
+            type_names = [t.name for t in self.atom_types]
+        elif label_kind in self._available_topo_types:
+            type_names = [t.name for t in self._get_topo_type_list(label_kind)]
+        else:
+            raise ValueError(f"Label kind {label_kind} is not valid.")
+        
+        if topo_type in type_names:
+            return type_names.index(topo_type)
+        else:
+            raise ValueError(f"Topology type label {topo_type} was not found in {label_kind} types.")
+
+
+
     def infer_topo_names_from_atoms(self, override=True):
         """
         Uses atom type names to infer topology type names.
