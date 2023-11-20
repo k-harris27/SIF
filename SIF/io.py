@@ -113,7 +113,7 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None, forcefield
                 7,8,9 = image flags
                 """
                 atom_id = int(words[0])-1
-                atom_type = int(words[2])-1
+                atom_type = world.expand_type_label("atom",words[2])
                 charge = float(words[3])
                 pos = [float(r) for r in words[4:7]]
                 img_flags = [int(f) for f in words[7:10]]
@@ -121,57 +121,20 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None, forcefield
                     pos = [p + img*world.width[dim] for p,img,dim in zip(pos,img_flags,range(3))]
                 world.atoms[atom_id] = Atom(atom_type,charge,pos)
 
-            elif section == "Bonds":
+            elif section[:-1].lower() in world._available_topo_types:
                 """
-                Bonds section words:
-                0 = Bond number ID
-                1 = Bond type
-                2 = atom 1 ID
-                3 = atom 2 ID
-                """
-                i = int(words[0])-1
-                bond_type = int(words[1])-1
-                atom_1 = int(words[2])-1
-                atom_2 = int(words[3])-1
-                atom_1,atom_2 = world._validate_topo_atoms(atom_1,atom_2)
-                world.bonds[i] = Topology(atom_1, atom_2, type_id = bond_type)
-
-            elif section == "Angles":
-                """
-                Angles section words:
-                0 = Angle number ID
-                1 = Angle type
-                2,3,4 = atom IDs
+                Topology section words:
+                0 = topology number ID
+                1 = topology type
+                2... = atom n ID
                 """
                 i = int(words[0])-1
-                angle_type = int(words[1])-1
-                atoms = world._validate_topo_atoms(*(int(w)-1 for w in words[2:]))
-                world.angles[i] = Topology(*atoms, type_id = angle_type)
-
-            elif section == "Dihedrals":
-                """
-                Dihedrals section words:
-                0 = Dih number ID
-                1 = Dih type
-                2,3,4,5 = atom IDs
-                """
-                i = int(words[0])-1
-                dih_type = int(words[1])-1
-                atoms = world._validate_topo_atoms(*(int(w)-1 for w in words[2:]))
-                world.dihedrals[i] = Topology(*atoms, type_id = dih_type)
-
-            elif section == "Impropers":
-                """
-                Impropers section words:
-                0 = Imp number ID
-                1 = Imp type
-                2,3,4,5 = atom IDs
-                """
-                i = int(words[0])-1
-                imp_type = int(words[1])-1
-                atoms = world._validate_topo_atoms(*(int(w)-1 for w in words[2:]))
-                world.impropers[i] = Topology(*atoms, type_id = imp_type)
-
+                topo_kind = section[:-1].lower()
+                topo_type = world.expand_type_label(topo_kind, words[1])
+                atoms = [int(word)-1 for word in words[2:]]
+                atoms = world._validate_topo_atoms(*atoms)
+                world._get_topo_list(topo_kind)[i] = Topology(*atoms, type_id=topo_type)
+            
             elif section not in warned_sections:
                 logger.warning(f"Unexpected section title in LAMMPS input file: {section}")
                 warned_sections.append(section)
@@ -197,7 +160,7 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None, forcefield
                             id = int(words[1])-1
                         else:
                             type_names = [t.name for t in world._get_topo_type_list(topo_kind)]
-                            id = type_names.index(type_names)
+                            id = type_names.index(words[1])
                         params = [float(w) for w in words[2:]]
                         topo_types[id].parameters = params
                 
@@ -208,6 +171,8 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None, forcefield
     _debug_print_resource()
 
     return world
+
+
 
 def write_lammps_data(world : World, path_to_file : str, comment : str = "") -> None:
     """Write world to file in LAMMPS .data format"""
