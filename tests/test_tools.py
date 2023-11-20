@@ -11,6 +11,16 @@ def oplsaa_world():
     dir = f"{Path(__file__).resolve().parent}/test_data/oplsaa_atoms.data"
     return SIF.io.read_lammps_data(dir, forcefield=ForceFields.oplsaa)
 
+@pytest.fixture
+def labelled_world():
+    dir = f"{Path(__file__).resolve().parent}/test_data/type_labels.data"
+    return SIF.io.read_lammps_data(dir)
+
+@pytest.fixture
+def labelled_ext_world():
+    dir = f"{Path(__file__).resolve().parent}/test_data/type_labels_extended.data"
+    return SIF.io.read_lammps_data(dir)
+
 def test_bonded_search_1_atom(oplsaa_world : SIF.World):
     world = oplsaa_world
     sel = get_connected_atoms(world, 21, extent=3)
@@ -31,7 +41,7 @@ def test_update_atom_types_to_match(oplsaa_world : SIF.World):
     for topo_kind in target._available_topo_types:
         target._get_topo_list(topo_kind).clear()
 
-    for i in (1,6,7):
+    for i in (1,6,7,-1):
         target.atom_types.pop(i)
 
     update_types_to_match(target, ref)
@@ -50,7 +60,7 @@ def test_update_topo_types_to_match(oplsaa_world : SIF.World):
     for topo_kind in target._available_topo_types:
         target._get_topo_list(topo_kind).clear()
 
-    for i in (1,6,7):
+    for i in (1,6,7,-1):
         target.dihedral_types.pop(i)
     
     update_types_to_match(target, ref)
@@ -58,4 +68,10 @@ def test_update_topo_types_to_match(oplsaa_world : SIF.World):
     target_names = [t.name for t in target.dihedral_types]
     ref_names = [t.name for t in ref.dihedral_types]
 
+    assert target_names == ref_names
+
+def test_update_atom_types_to_match_2(labelled_world : SIF.World, labelled_ext_world : SIF.World):
+    update_types_to_match(labelled_world, labelled_ext_world)
+    target_names = [t.name for t in labelled_world.atom_types]
+    ref_names = [t.name for t in labelled_ext_world.atom_types]
     assert target_names == ref_names
