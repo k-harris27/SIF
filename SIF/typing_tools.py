@@ -10,32 +10,26 @@ def update_types_to_match(target : World, reference : World, debug : bool = Fals
     WARNING: Atom types can only be updated if all atoms have associated type labels."""
 
     # Atoms - only if all atom types in both worlds have names
-    if all(t.name is not None for atom_types in (target.atom_types, reference.atom_types) for t in atom_types):
-        names_in_target = [t.name for t in target.atom_types]
-        current_target_type_id = 0
-        for i,atom_type in enumerate(reference.atom_types):
-            if atom_type.name not in names_in_target:
-                logger.debug(f"Inserting atom type {atom_type.name} to position {i}.")
-                target.add_atom_type(atom_type.mass, atom_type.name, index=i)
-    else:
-        logger.warning("Not all atom types had names assigned! Atom type names couldn't be updated.")
+    all_type_lists = [w._get_topo_type_list(topo_kind) for w in (target,reference) for topo_kind in w._available_topo_types]
+    all_type_lists += [target.atom_types, reference.atom_types]
+    if any(t.name is None for types in all_type_lists for t in types):
+        raise ValueError("Some types do not currently have type labels! Type merging can't be confidently carried out without these.")
+    names_in_target = [t.name for t in target.atom_types]
+    for i,atom_type in enumerate(reference.atom_types):
+        if atom_type.name not in names_in_target:
+            logger.debug(f"Inserting atom type {atom_type.name} to position {i}.")
+            target.add_atom_type(atom_type.mass, atom_type.name, index=i)
 
     # Topology
     for topo_kind in World._available_topo_types:
         targ_types = target._get_topo_type_list(topo_kind)
         ref_types = reference._get_topo_type_list(topo_kind)
 
-        if len(targ_types) > len(ref_types):
-            raise ValueError(f"Reference world ({len(ref_types)} {topo_kind}) should have more types than target world ({len(targ_types)} {topo_kind}).")
-
-        current_target_type_id = 0
-        targ_types_old = copy(targ_types)  # We can edit targ_types on the go while keeping a copy of the original
+        names_in_target = [t.name for t in target._get_topo_type_list(topo_kind)]
         for i,topo_type in enumerate(ref_types):
-            targ_type = targ_types_old[current_target_type_id]
-            if topo_type.name is not None and targ_type.name is not None and topo_type.name == targ_type.name:
-                if topo_type.parameters != targ_types_old[current_target_type_id].parameters:
+            if topo_type.name in names_in_target:
+                if topo_type.parameters != targ_types[names_in_target.index(topo_type.name)].parameters:
                     logger.warning(f"{topo_kind} types with the same name but different parameters were found during type updating! Using target world values.")
-                current_target_type_id += 1
             else:
                 logger.debug(f"Inserting {topo_kind} params {topo_type} at ID {i}.")
                 target._add_topo_type(topo_kind, *topo_type.parameters, topo_id = i, type_name=topo_type.name)  # Insert new topology type & update all existing topology to the correct types.
