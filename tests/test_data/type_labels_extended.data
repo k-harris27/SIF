@@ -1,9 +1,9 @@
 LAMMPS data file via write_data, version 15 Sep 2022, timestep = 0
 
 2 atoms
-2 atom types
+4 atom types
 1 bonds
-1 bond types
+3 bond types
 
 -10 10 xlo xhi
 -10 10 ylo yhi
@@ -12,11 +12,15 @@ LAMMPS data file via write_data, version 15 Sep 2022, timestep = 0
 Atom Type Labels
 
 1 A
-2 B
+2 A2
+3 B
+4 C
 
 Bond Type Labels
 
-1 A-B
+1 A-A2
+2 A-B
+3 B-C
 
 Angle Type Labels
 

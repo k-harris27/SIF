@@ -49,12 +49,12 @@ def test_write_labelled_molecule_file(lmp_labelled_world : SIF.World, out_world_
     assert True
 
 def test_ff_atom_names(oplsaa_world : SIF.World):
-    available_types = ForceFields.oplsaa.atom_names.values()
+    available_types = ForceFields.oplsaa["type_to_topo"].keys()
     world_types = [t.name for t in oplsaa_world.atom_types]
     assert all(t in available_types for t in world_types)
 
 def test_ff_bond_names(oplsaa_world : SIF.World):
-    assert oplsaa_world.bond_types[0].name == "HO-OH"
+    assert oplsaa_world.bond_types[0].name == "tt005-tt007"
 
 def test_no_dupes_in_inferred(oplsaa_world : SIF.World):
     world = oplsaa_world
@@ -81,3 +81,19 @@ def test_inferred_atom_equivalences(oplsaa_world : SIF.World):
                 not_substituted[topo_kind] = True
                 break
     assert all([flag is False for flag in not_substituted.values()])
+
+def test_inferred_dihedrals(oplsaa_world : SIF.World):
+    world = oplsaa_world
+    assert world.dihedral_types[13].name == "ttX-tt013-tt020-tt013"
+
+def test_all_inferred_dihedrals(oplsaa_world : SIF.World):
+    world = oplsaa_world
+    dihedral_names = [t.name for t in world.dihedral_types]
+    available_names = ["-".join(atoms) for atoms in ForceFields.oplsaa["dihedrals"]]
+    assert all(name in available_names for name in dihedral_names)
+
+def test_inferred_impropers(oplsaa_world : SIF.World):
+    world = oplsaa_world
+    improper_names = [t.name for t in world.improper_types]
+    available_names = ["-".join(atoms) for atoms in ForceFields.oplsaa["impropers"]]
+    assert all(name in available_names for name in improper_names)

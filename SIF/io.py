@@ -1,22 +1,19 @@
 from ._core import *
 import resource
 from typing import Dict, Tuple
-from SIF.forcefields import ForceField
 
 # TODO: Read/Write molecule files properly too.
 
-def read_lammps_data(path_to_file : str, path_to_params : str = None, forcefield : ForceField = None) -> World:
+def read_lammps_data(path_to_file : str, path_to_params : str = None, forcefield : Dict = None) -> World:
     """Read LAMMPS .data file into a world object.\n
     path_to_file would be a .data file, path_to_params is optional and should direct to the file specifying interaction coefficients."""
-    world = World()  # Create world instance to be populated
+    world = World(forcefield=forcefield)  # Create world instance to be populated
 
     num_atoms = None
     num_bonds = None
     num_angles = None
     num_dihedrals = None
     num_impropers = None
-
-    if forcefield is not None: type_name_lookup = forcefield.atom_names
 
     warned_sections = []  # List of section names that unexpected warnings have been printed for. 
 
@@ -99,11 +96,11 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None, forcefield
             elif section == "Masses":
                 world.atom_types[int(words[0])-1].mass = float(words[1])
                 comment_words = comment.split()
-                if len(comment_words) == 1:  # Assume it's an atom type string
+                if len(comment_words) == 1 and "type" in comment_words[0] :  # Assume it's an atom type string
                     name = comment_words[0]
-                    if type_name_lookup is not None:
-                        name = type_name_lookup[name]
-                    world.atom_types[int(words[0])-1].name = name
+                    digits = int(name[4:])
+                    fname = f"t{digits:03d}"
+                    world.atom_types[int(words[0])-1].name = fname
 
             elif section == "Atoms":
                 """
@@ -116,7 +113,7 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None, forcefield
                 7,8,9 = image flags
                 """
                 atom_id = int(words[0])-1
-                atom_type = int(words[2])-1
+                atom_type = world.expand_type_label("atom",words[2])
                 charge = float(words[3])
                 pos = [float(r) for r in words[4:7]]
                 img_flags = [int(f) for f in words[7:10]]
@@ -124,57 +121,20 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None, forcefield
                     pos = [p + img*world.width[dim] for p,img,dim in zip(pos,img_flags,range(3))]
                 world.atoms[atom_id] = Atom(atom_type,charge,pos)
 
-            elif section == "Bonds":
+            elif section[:-1].lower() in world._available_topo_types:
                 """
-                Bonds section words:
-                0 = Bond number ID
-                1 = Bond type
-                2 = atom 1 ID
-                3 = atom 2 ID
-                """
-                i = int(words[0])-1
-                bond_type = int(words[1])-1
-                atom_1 = int(words[2])-1
-                atom_2 = int(words[3])-1
-                atom_1,atom_2 = world._validate_topo_atoms(atom_1,atom_2)
-                world.bonds[i] = Topology(atom_1, atom_2, type_id = bond_type)
-
-            elif section == "Angles":
-                """
-                Angles section words:
-                0 = Angle number ID
-                1 = Angle type
-                2,3,4 = atom IDs
+                Topology section words:
+                0 = topology number ID
+                1 = topology type
+                2... = atom n ID
                 """
                 i = int(words[0])-1
-                angle_type = int(words[1])-1
-                atoms = world._validate_topo_atoms(*(int(w)-1 for w in words[2:]))
-                world.angles[i] = Topology(*atoms, type_id = angle_type)
-
-            elif section == "Dihedrals":
-                """
-                Dihedrals section words:
-                0 = Dih number ID
-                1 = Dih type
-                2,3,4,5 = atom IDs
-                """
-                i = int(words[0])-1
-                dih_type = int(words[1])-1
-                atoms = world._validate_topo_atoms(*(int(w)-1 for w in words[2:]))
-                world.dihedrals[i] = Topology(*atoms, type_id = dih_type)
-
-            elif section == "Impropers":
-                """
-                Impropers section words:
-                0 = Imp number ID
-                1 = Imp type
-                2,3,4,5 = atom IDs
-                """
-                i = int(words[0])-1
-                imp_type = int(words[1])-1
-                atoms = world._validate_topo_atoms(*(int(w)-1 for w in words[2:]))
-                world.impropers[i] = Topology(*atoms, type_id = imp_type)
-
+                topo_kind = section[:-1].lower()
+                topo_type = world.expand_type_label(topo_kind, words[1])
+                atoms = [int(word)-1 for word in words[2:]]
+                atoms = world._validate_topo_atoms(*atoms)
+                world._get_topo_list(topo_kind)[i] = Topology(*atoms, type_id=topo_type)
+            
             elif section not in warned_sections:
                 logger.warning(f"Unexpected section title in LAMMPS input file: {section}")
                 warned_sections.append(section)
@@ -193,19 +153,26 @@ def read_lammps_data(path_to_file : str, path_to_params : str = None, forcefield
                 if words[0] == "pair_coeff":
                     pass  # TODO: Storing pair coefficients???
                 # Collect and store topology parameters. There's better ways to do this but eh.
-                for topo_name in ("bond","angle","dihedral","improper"):
-                    if words[0] == f"{topo_name}_coeff":
-                        topo_types = world._get_topo_type_list(topo_name)
-                        id = int(words[1])-1
+                for topo_kind in ("bond","angle","dihedral","improper"):
+                    if words[0] == f"{topo_kind}_coeff":
+                        topo_types = world._get_topo_type_list(topo_kind)
+                        if words[1].isdigit():
+                            id = int(words[1])-1
+                        else:
+                            type_names = [t.name for t in world._get_topo_type_list(topo_kind)]
+                            id = type_names.index(words[1])
                         params = [float(w) for w in words[2:]]
                         topo_types[id].parameters = params
                 
     # Infer topology names if all atom type names are given.
-    if all(t.name is not None for t in world.atom_types):
-        world.infer_topo_names_from_atoms(override=False, forcefield=forcefield)
+    if world.forcefield is not None and all(t.name is not None for t in world.atom_types):
+        world.infer_topo_names_from_atoms(override=False)
 
     _debug_print_resource()
+
     return world
+
+
 
 def write_lammps_data(world : World, path_to_file : str, comment : str = "") -> None:
     """Write world to file in LAMMPS .data format"""
@@ -242,12 +209,20 @@ def write_lammps_data(world : World, path_to_file : str, comment : str = "") -> 
         
             # Override = False will prevent this from overwriting
             # if we've assigned manually/previously.
-            world.infer_topo_names_from_atoms(override=False)
+            if world.forcefield is not None:
+                world.infer_topo_names_from_atoms(override=False)
+            
+            raise_warn = False
             for topo_kind in world._available_topo_types:
                 file.write(f"{topo_kind.capitalize()} Type Labels\n\n")
                 for i, topo_type in enumerate(world._get_topo_type_list(topo_kind)):
+                    if topo_type.name is None:
+                        raise_warn = True
+                        continue  # Don't write if we don't have a name for it.
                     file.write(f"{i+1} {topo_type.name}\n")
                 file.write("\n")
+            if raise_warn:
+                warnings.warn("Not all topology types had type labels assigned! Consider applying a forcefield to the World.")
 
         # Masses section
         file.write("Masses\n")
@@ -272,8 +247,8 @@ def write_lammps_data(world : World, path_to_file : str, comment : str = "") -> 
             if len(topo) > 0: _write_lammps_topo(header_text,topo,file)
 
 
-def read_react_template(path_to_file : str) -> World:
-    world = World()  # Create world instance to be populated
+def read_react_template(path_to_file : str, forcefield : Dict = None) -> World:
+    world = World(forcefield=forcefield)  # Create world instance to be populated
 
     section = "Headers"  # We start with headers
     with open(path_to_file,"r") as file:
@@ -347,7 +322,7 @@ def write_react_template(world : World, path_to_file : str, comment : str = "") 
     """
 
     all_type_labels_defined = all(t.name is not None for t in world.atom_types)
-    if all_type_labels_defined:
+    if all_type_labels_defined and world.forcefield is not None:
         world.infer_topo_names_from_atoms(override=False)  # Override=False only updates unset type labels
 
     with open(path_to_file, "w") as file:
