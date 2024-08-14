@@ -1,6 +1,9 @@
 import SIF
 
 """
+NOTE: AutoMapper seems to do all of this and more in a much more user-friendly way.
+        Refer to https://github.com/m-bone/AutoMapper/blob/main/AutoMapper_Manual.pdf
+
 In this script, we use SIF to load in a LAMMPS data file containing
     a number of polymer building blocks to build fix bond/react
     template files from. A number of commands need to be used to
@@ -47,6 +50,8 @@ ddm_frag, ddm_equiv_atoms = SIF.template_tools.get_connected_atoms(
 
 
 ### Charge equalisation between reactants and products ###
+#
+# NOTE: May not be necessary any more, as REACTER now contains this feature!
 #
 # Since there is an Aromatic C overlapping between MXDA templates on either
 #   side, we have to keep that atom's charge consistent with unreacted MXDA.

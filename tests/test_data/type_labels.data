@@ -1,0 +1,42 @@
+LAMMPS data file via write_data, version 15 Sep 2022, timestep = 0
+
+2 atoms
+2 atom types
+1 bonds
+1 bond types
+
+-10 10 xlo xhi
+-10 10 ylo yhi
+-10 10 zlo zhi
+
+Atom Type Labels
+
+1 A
+2 B
+
+Bond Type Labels
+
+1 A-B
+
+Angle Type Labels
+
+
+Dihedral Type Labels
+
+
+Improper Type Labels
+
+
+Masses
+
+1 1
+2 2
+
+Atoms # full
+
+1 0 1 0 0 0 0 0 0 0
+2 0 2 0 5 5 5 0 0 0
+
+Bonds
+
+1 1 1 2
