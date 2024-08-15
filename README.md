@@ -45,9 +45,14 @@ While you *can* edit the above arrays inplace if you want, this will tend to cau
 
 ### Automatic Type Labels
 
-```**
-NOTE: This feature as-written is quite narrow, and applied only to the OPLS-AA forcefield (although it shouldn't be too difficult to apply to others)
-**```
+**NOTE:** This feature as-written is quite narrow. It works only on files produced by Moltemplate and currently applied only to the OPLS-AA forcefield (although it shouldn't be too difficult to apply to others).
+
+### Examples
+
+Example scripts showing off some of the potential uses of the module are in examples/ .  
+
+- frag_gen/ : REACTER fragment/template file generation.
+- topo_extension/ : Merging the topology lists of two separate input files.
 
 ## Installation
 
